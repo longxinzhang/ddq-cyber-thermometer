@@ -89,6 +89,14 @@ swift test
 
 当前仓库尚未配置 `Tests/` 目录和测试 target。第一次引入单元测试的 PR 应先完成核心逻辑抽取和测试 target 配置，再补充首批测试用例。
 
+如果当前本机工具链缺少 `XCTest` 或 Swift `Testing` 模块，可以临时使用可执行测试 runner 验证纯逻辑：
+
+```bash
+swift run MacHealthGuardianCoreTestRunner
+```
+
+该 runner 只能作为过渡方案。后续切换到完整 Xcode/Swift 测试工具链后，应优先恢复标准 `.testTarget` 和 `swift test`。
+
 ### 集成与命令行验证
 
 适用于运行时行为：
