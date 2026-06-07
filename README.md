@@ -38,6 +38,16 @@ docs/index.html
 
 推到 GitHub 后可以直接启用 GitHub Pages，发布 `docs/` 目录。
 
+## 维护文档
+
+设计文档和工程规范在：
+
+```text
+docs/design/README.md
+```
+
+当前包含项目结构、工程规范、测试规范和测试报告模板。
+
 ## 本地打包
 
 ```bash
