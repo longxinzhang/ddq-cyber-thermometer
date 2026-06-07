@@ -1,0 +1,442 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>动动枪的电脑体温计</title>
+  <meta name="description" content="一个安静待在 macOS 顶栏里的电脑状态小组件：内存、CPU、核心温度，一眼看完。">
+  <meta property="og:title" content="动动枪的电脑体温计">
+  <meta property="og:description" content="内存、CPU、核心温度，一眼看完。">
+  <meta property="og:image" content="assets/hero-preview.png">
+  <link rel="icon" href="assets/app-icon.png">
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0d1111;
+      --ink: #f4f7f4;
+      --muted: #aab5b1;
+      --line: rgba(255, 255, 255, 0.14);
+      --panel: rgba(255, 255, 255, 0.055);
+      --cyan: #bdf3ee;
+      --blue: #4b8cff;
+      --green: #61ca69;
+      --warm: #f2c56b;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      letter-spacing: 0;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .topbar {
+      position: fixed;
+      z-index: 10;
+      top: 0;
+      left: 0;
+      right: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 16px clamp(18px, 4vw, 56px);
+      background: rgba(13, 17, 17, 0.68);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(18px);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+      font-weight: 720;
+    }
+
+    .brand img {
+      width: 30px;
+      height: 30px;
+      border-radius: 7px;
+    }
+
+    .brand span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .nav {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 14px;
+      white-space: nowrap;
+    }
+
+    .nav a {
+      padding: 8px 10px;
+      border-radius: 8px;
+    }
+
+    .nav a:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--ink);
+    }
+
+    .hero {
+      min-height: 88vh;
+      display: grid;
+      align-items: end;
+      padding: 112px clamp(18px, 5vw, 72px) 64px;
+      background:
+        linear-gradient(90deg, rgba(13, 17, 17, 0.08), rgba(13, 17, 17, 0.68) 72%),
+        linear-gradient(0deg, #0d1111 0%, rgba(13, 17, 17, 0.08) 34%),
+        url("assets/hero-preview.png") center / cover no-repeat;
+    }
+
+    .hero-copy {
+      max-width: 720px;
+      padding-bottom: 6vh;
+    }
+
+    .eyebrow {
+      margin: 0 0 14px;
+      color: var(--cyan);
+      font-size: 14px;
+      font-weight: 760;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      max-width: 650px;
+      font-size: clamp(44px, 7vw, 88px);
+      line-height: 1.02;
+      letter-spacing: 0;
+    }
+
+    .lead {
+      margin: 22px 0 0;
+      max-width: 620px;
+      color: rgba(244, 247, 244, 0.82);
+      font-size: clamp(18px, 2.2vw, 26px);
+      line-height: 1.45;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 34px;
+    }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 46px;
+      padding: 0 18px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      font-weight: 720;
+    }
+
+    .button.primary {
+      background: var(--cyan);
+      color: #071010;
+      border-color: transparent;
+    }
+
+    .button.secondary {
+      background: rgba(255, 255, 255, 0.07);
+      color: var(--ink);
+    }
+
+    main {
+      overflow: hidden;
+    }
+
+    section {
+      padding: 76px clamp(18px, 5vw, 72px);
+    }
+
+    .section-inner {
+      max-width: 1160px;
+      margin: 0 auto;
+    }
+
+    .section-heading {
+      margin: 0 0 28px;
+      max-width: 760px;
+      font-size: clamp(30px, 4vw, 52px);
+      line-height: 1.12;
+      letter-spacing: 0;
+    }
+
+    .section-copy {
+      margin: 0;
+      max-width: 760px;
+      color: var(--muted);
+      font-size: 18px;
+      line-height: 1.7;
+    }
+
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 32px;
+    }
+
+    .feature {
+      min-height: 164px;
+      padding: 22px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+    }
+
+    .metric {
+      margin: 0 0 14px;
+      font-size: 34px;
+      font-variant-numeric: tabular-nums;
+      font-weight: 780;
+    }
+
+    .feature h3 {
+      margin: 0 0 8px;
+      font-size: 18px;
+    }
+
+    .feature p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.58;
+    }
+
+    .visual {
+      width: 100%;
+      margin-top: 34px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      display: block;
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .install {
+      display: grid;
+      grid-template-columns: 0.95fr 1.05fr;
+      gap: 28px;
+      align-items: start;
+    }
+
+    .steps {
+      display: grid;
+      gap: 12px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .steps li {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 18px 18px 18px 52px;
+      background: var(--panel);
+      color: var(--muted);
+      line-height: 1.6;
+      position: relative;
+    }
+
+    .steps strong {
+      display: block;
+      color: var(--ink);
+      margin-bottom: 4px;
+    }
+
+    .steps li::before {
+      content: attr(data-step);
+      position: absolute;
+      left: 16px;
+      top: 18px;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: var(--cyan);
+      color: #071010;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .note {
+      border-left: 3px solid var(--warm);
+      padding: 4px 0 4px 16px;
+      color: var(--muted);
+      line-height: 1.65;
+    }
+
+    footer {
+      padding: 30px clamp(18px, 5vw, 72px) 42px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+    }
+
+    .footer-inner {
+      max-width: 1160px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      flex-wrap: wrap;
+    }
+
+    @media (max-width: 840px) {
+      .topbar {
+        position: absolute;
+      }
+
+      .nav a:not(.keep) {
+        display: none;
+      }
+
+      .hero {
+        min-height: 86vh;
+        align-items: end;
+        background-position: 60% center;
+      }
+
+      .hero-copy {
+        padding-bottom: 20px;
+      }
+
+      .feature-grid,
+      .install {
+        grid-template-columns: 1fr;
+      }
+
+      section {
+        padding-top: 58px;
+        padding-bottom: 58px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" data-source-link href="#" aria-label="打开源码仓库">
+      <img src="assets/app-icon.png" alt="">
+      <span>动动枪的电脑体温计</span>
+    </a>
+    <nav class="nav" aria-label="页面导航">
+      <a href="#features">特性</a>
+      <a href="#install">安装</a>
+      <a class="keep" data-release-link href="#">下载</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow">macOS menu bar thermometer</p>
+        <h1>动动枪的电脑体温计</h1>
+        <p class="lead">一个安静待在 macOS 顶栏里的电脑状态小组件。内存、CPU、核心温度，一眼看完。</p>
+        <div class="actions">
+          <a class="button primary" data-release-link href="#">下载 v0.1.0</a>
+          <a class="button secondary" data-source-link href="#">查看源码</a>
+        </div>
+      </div>
+    </section>
+
+    <section id="features">
+      <div class="section-inner">
+        <h2 class="section-heading">只占一小块顶栏，但保留最关键的状态。</h2>
+        <p class="section-copy">左柱显示内存占用，右柱显示 CPU 占用，温度数字紧贴在旁边。鼠标移上去再显示完整数值，平时不打扰工作。</p>
+
+        <div class="feature-grid">
+          <article class="feature">
+            <p class="metric" style="color: var(--blue);">79%</p>
+            <h3>内存占用</h3>
+            <p>用蓝色迷你柱快速判断内存压力，完整容量信息放在悬停提示里。</p>
+          </article>
+          <article class="feature">
+            <p class="metric" style="color: var(--green);">15%</p>
+            <h3>CPU 占用</h3>
+            <p>右侧绿柱显示实时 CPU 负载，高负载时自动转为更醒目的颜色。</p>
+          </article>
+          <article class="feature">
+            <p class="metric" style="color: var(--cyan);">43°C</p>
+            <h3>核心温度</h3>
+            <p>Apple Silicon 优先读取 PMU tdie 温度，取最高核心温度显示。</p>
+          </article>
+        </div>
+
+        <img class="visual" src="assets/widget-closeup.png" alt="顶栏小组件展示：双柱显示内存和 CPU，旁边显示温度。">
+      </div>
+    </section>
+
+    <section id="install">
+      <div class="section-inner install">
+        <div>
+          <h2 class="section-heading">下载 DMG，拖进 Applications。</h2>
+          <p class="section-copy">代码开放，安装包放在 GitHub Release。当前版本是 v0.1.0。</p>
+          <div class="actions">
+            <a class="button primary" data-release-link href="#">打开 Release 下载</a>
+          </div>
+        </div>
+        <div>
+          <ol class="steps">
+            <li data-step="1"><strong>下载</strong>获取 `动动枪的电脑体温计-0.1.0.dmg`。</li>
+            <li data-step="2"><strong>安装</strong>打开 DMG，把 App 拖到 Applications。</li>
+            <li data-step="3"><strong>运行</strong>打开后它会出现在顶栏，不显示 Dock 图标。</li>
+          </ol>
+          <p class="note">当前包是本地临时签名，未做 Apple Developer ID 公证。首次打开如遇系统拦截，可右键 App 选择“打开”，或在“系统设置 > 隐私与安全性”里允许打开。</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+      <span>MIT License · v0.1.0</span>
+      <a data-source-link href="#">GitHub</a>
+    </div>
+  </footer>
+
+  <script>
+    const fallbackOwner = "YOUR_GITHUB_NAME";
+    const fallbackRepo = "dongdongqiang-computer-thermometer";
+    const pathParts = window.location.pathname.split("/").filter(Boolean);
+    const isGitHubPages = window.location.hostname.endsWith(".github.io");
+    const owner = isGitHubPages ? window.location.hostname.split(".")[0] : fallbackOwner;
+    const repo = isGitHubPages && pathParts[0] ? pathParts[0] : fallbackRepo;
+    const sourceURL = `https://github.com/${owner}/${repo}`;
+    const releaseURL = `${sourceURL}/releases/latest`;
+
+    document.querySelectorAll("[data-source-link]").forEach((element) => {
+      element.href = sourceURL;
+    });
+    document.querySelectorAll("[data-release-link]").forEach((element) => {
+      element.href = releaseURL;
+    });
+  </script>
+</body>
+</html>
