@@ -3,9 +3,9 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 REPO_NAME="${GITHUB_REPO_NAME:-ddq-cyber-thermometer}"
-TAG="v0.1.0"
-TITLE="DDQ's Cyber Thermometer v0.1.0"
-DMG="$ROOT_DIR/dist/DDQs-Cyber-Thermometer-0.1.0.dmg"
+TAG="v0.2.1"
+TITLE="DDQ's Cyber Thermometer v0.2.1"
+DMG="$ROOT_DIR/dist/DDQs-Cyber-Thermometer-0.2.1.dmg"
 SHA="$DMG.sha256"
 
 cd "$ROOT_DIR"
@@ -26,7 +26,7 @@ fi
 
 git add .
 if ! git diff --cached --quiet; then
-  git commit -m "Prepare v0.1.0 release"
+  git commit -m "Prepare $TAG release"
 fi
 
 if git rev-parse "$TAG" >/dev/null 2>&1; then

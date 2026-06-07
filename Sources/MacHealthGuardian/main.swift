@@ -46,6 +46,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let memoryItem = NSMenuItem(title: "内存 --", action: nil, keyEquivalent: "")
     private let cpuItem = NSMenuItem(title: "CPU --", action: nil, keyEquivalent: "")
     private let temperatureItem = NSMenuItem(title: "核心温度 --", action: nil, keyEquivalent: "")
+    private let fanItem = NSMenuItem(title: "风扇转速 --", action: nil, keyEquivalent: "")
     private let updatedItem = NSMenuItem(title: "等待刷新", action: nil, keyEquivalent: "")
     private var statusItem: NSStatusItem?
 
@@ -76,13 +77,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func configureMenu() {
-        [memoryItem, cpuItem, temperatureItem, updatedItem].forEach { item in
+        [memoryItem, cpuItem, temperatureItem, fanItem, updatedItem].forEach { item in
             item.isEnabled = false
         }
 
         menu.addItem(memoryItem)
         menu.addItem(cpuItem)
         menu.addItem(temperatureItem)
+        menu.addItem(fanItem)
         menu.addItem(updatedItem)
         menu.addItem(.separator())
 
@@ -114,6 +116,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         memoryItem.title = "内存占用 \(snapshot.memory.usedPercent.percentText)  \(snapshot.memory.usedGB.gbText) / \(snapshot.memory.totalGB.gbText)"
         cpuItem.title = "CPU 占用 \(snapshot.cpuUsage.percentText)"
         temperatureItem.title = "核心温度 \(snapshot.temperatureText)  \(snapshot.thermalStateText)"
+        fanItem.title = "风扇转速 \(snapshot.fan.displayText)"
         updatedItem.title = "更新 \(snapshot.updatedAt.timeText)"
     }
 
@@ -286,12 +289,14 @@ final class StatusImageRenderer {
 final class SystemSampler: @unchecked Sendable {
     private let shell: Shell
     private let temperatureReader: TemperatureReader
+    private let fanSpeedReader: FanSpeedReader
     private var previousCPUTicks: CPUTicks?
 
     init() {
         let shell = Shell()
         self.shell = shell
         self.temperatureReader = TemperatureReader(shell: shell)
+        self.fanSpeedReader = FanSpeedReader(shell: shell)
         self.previousCPUTicks = CPUTicks.current()
     }
 
@@ -300,6 +305,7 @@ final class SystemSampler: @unchecked Sendable {
             memory: readMemory(),
             cpuUsage: readCPUUsage(),
             coreTemperatureC: temperatureReader.read(),
+            fan: fanSpeedReader.read(),
             thermalState: ProcessInfo.processInfo.thermalState,
             updatedAt: Date()
         )
@@ -389,6 +395,7 @@ struct SystemSnapshot {
     let memory: MemorySnapshot
     let cpuUsage: Double
     let coreTemperatureC: Double?
+    let fan: FanSpeedSnapshot
     let thermalState: ProcessInfo.ThermalState
     let updatedAt: Date
 
@@ -397,6 +404,7 @@ struct SystemSnapshot {
             memory: .empty,
             cpuUsage: 0,
             coreTemperatureC: nil,
+            fan: .unknown,
             thermalState: .nominal,
             updatedAt: Date()
         )
@@ -441,6 +449,7 @@ struct SystemSnapshot {
             "内存占用: \(memory.usedPercent.percentText) (\(memory.usedGB.gbText) / \(memory.totalGB.gbText))",
             "CPU 占用: \(cpuUsage.percentText)",
             "核心温度: \(temperatureText)",
+            "风扇转速: \(fan.displayText)",
             "热状态: \(thermalStateText)",
             "更新时间: \(updatedAt.fullTimeText)"
         ].joined(separator: "\n")
@@ -468,6 +477,143 @@ struct MemorySnapshot {
 
     var shortPercentText: String {
         usedPercent.shortPercentText
+    }
+}
+
+struct FanSpeedSnapshot {
+    let speedsRPM: [Double]
+    let isFanless: Bool
+    let source: String?
+
+    static let unknown = FanSpeedSnapshot(speedsRPM: [], isFanless: false, source: nil)
+    static let fanless = FanSpeedSnapshot(speedsRPM: [], isFanless: true, source: "SMC")
+
+    var displayText: String {
+        if isFanless {
+            return "无风扇"
+        }
+        guard !speedsRPM.isEmpty else {
+            return "未读取"
+        }
+
+        let values = speedsRPM
+            .map { "\(Int($0.rounded())) RPM" }
+            .joined(separator: " / ")
+        if let source {
+            return "\(values)  \(source)"
+        }
+        return values
+    }
+}
+
+final class FanSpeedReader: @unchecked Sendable {
+    private let shell: Shell
+    private let smcReader: AppleSMCReader?
+
+    init(shell: Shell) {
+        self.shell = shell
+        self.smcReader = AppleSMCReader()
+    }
+
+    func read() -> FanSpeedSnapshot {
+        if let snapshot = readFromSMC() {
+            return snapshot
+        }
+        if let snapshot = readFromIStats() {
+            return snapshot
+        }
+        if let snapshot = readFromSMCCommand() {
+            return snapshot
+        }
+        return .unknown
+    }
+
+    private func readFromSMC() -> FanSpeedSnapshot? {
+        guard let smcReader else { return nil }
+
+        if let fanCount = smcReader.readNumeric("FNum") {
+            let count = Int(fanCount.rounded())
+            if count == 0 {
+                return .fanless
+            }
+
+            let speeds = (0..<min(count, 8)).compactMap { index in
+                smcReader.readNumeric("F\(index)Ac")
+            }
+            if !speeds.isEmpty {
+                return FanSpeedSnapshot(speedsRPM: speeds, isFanless: false, source: "SMC")
+            }
+        }
+
+        let fallbackSpeeds = (0..<4).compactMap { index in
+            smcReader.readNumeric("F\(index)Ac")
+        }
+        guard !fallbackSpeeds.isEmpty else { return nil }
+        return FanSpeedSnapshot(speedsRPM: fallbackSpeeds, isFanless: false, source: "SMC")
+    }
+
+    private func readFromIStats() -> FanSpeedSnapshot? {
+        guard let path = shell.which("istats") else { return nil }
+        let output = shell.run(path, ["fan", "speed"])
+        let speeds = Self.rpmValues(in: output)
+        guard !speeds.isEmpty else { return nil }
+        return FanSpeedSnapshot(speedsRPM: speeds, isFanless: false, source: "iStats")
+    }
+
+    private func readFromSMCCommand() -> FanSpeedSnapshot? {
+        guard let path = shell.which("smc") else { return nil }
+
+        if let fanCount = Self.firstReasonableNumber(in: shell.run(path, ["-k", "FNum", "-r"])) {
+            let count = Int(fanCount.rounded())
+            if count == 0 {
+                return .fanless
+            }
+
+            let speeds = (0..<min(count, 8)).compactMap { index in
+                Self.firstReasonableNumber(in: shell.run(path, ["-k", "F\(index)Ac", "-r"]))
+            }
+            if !speeds.isEmpty {
+                return FanSpeedSnapshot(speedsRPM: speeds, isFanless: false, source: "smc")
+            }
+        }
+
+        let fallbackSpeeds = (0..<4).compactMap { index in
+            Self.firstReasonableNumber(in: shell.run(path, ["-k", "F\(index)Ac", "-r"]))
+        }
+        guard !fallbackSpeeds.isEmpty else { return nil }
+        return FanSpeedSnapshot(speedsRPM: fallbackSpeeds, isFanless: false, source: "smc")
+    }
+
+    private static func rpmValues(in text: String) -> [Double] {
+        let pattern = #"([0-9]+(?:\.[0-9]+)?)\s*(?:RPM|rpm)"#
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return [] }
+        let range = NSRange(text.startIndex..., in: text)
+        return regex.matches(in: text, range: range).compactMap { match -> Double? in
+            guard let valueRange = Range(match.range(at: 1), in: text),
+                  let value = Double(text[valueRange]),
+                  value >= 0,
+                  value <= 20_000
+            else {
+                return nil
+            }
+            return value
+        }
+    }
+
+    private static func firstReasonableNumber(in text: String) -> Double? {
+        let pattern = #"([0-9]+(?:\.[0-9]+)?)"#
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return nil }
+        let range = NSRange(text.startIndex..., in: text)
+        return regex.matches(in: text, range: range).compactMap { match -> Double? in
+            guard let valueRange = Range(match.range(at: 1), in: text),
+                  let value = Double(text[valueRange]),
+                  value >= 0,
+                  value <= 20_000
+            else {
+                return nil
+            }
+            return value
+        }.last
     }
 }
 
@@ -580,6 +726,175 @@ final class AppleSiliconTemperatureReader: @unchecked Sendable {
         }
 
         return temperatures.max()
+    }
+}
+
+struct SMCKeyDataVers {
+    var major: UInt8 = 0
+    var minor: UInt8 = 0
+    var build: UInt8 = 0
+    var reserved: UInt8 = 0
+    var release: UInt16 = 0
+}
+
+struct SMCKeyDataPLimitData {
+    var version: UInt16 = 0
+    var length: UInt16 = 0
+    var cpuPLimit: UInt32 = 0
+    var gpuPLimit: UInt32 = 0
+    var memPLimit: UInt32 = 0
+}
+
+struct SMCKeyDataKeyInfo {
+    var dataSize: UInt32 = 0
+    var dataType: UInt32 = 0
+    var dataAttributes: UInt8 = 0
+}
+
+struct SMCKeyData {
+    var key: UInt32 = 0
+    var vers = SMCKeyDataVers()
+    var pLimitData = SMCKeyDataPLimitData()
+    var keyInfo = SMCKeyDataKeyInfo()
+    var result: UInt8 = 0
+    var status: UInt8 = 0
+    var data8: UInt8 = 0
+    var data32: UInt32 = 0
+    var bytes: (
+        UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8,
+        UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8,
+        UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8,
+        UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8
+    ) = (
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+    )
+}
+
+struct SMCValue {
+    let type: String
+    let bytes: [UInt8]
+}
+
+final class AppleSMCReader: @unchecked Sendable {
+    private let smcHandleYPCEvent: UInt32 = 2
+    private let smcCmdReadBytes: UInt8 = 5
+    private let smcCmdReadKeyInfo: UInt8 = 9
+    private var connection: io_connect_t = 0
+
+    init?() {
+        let service = IOServiceGetMatchingService(kIOMainPortDefault, IOServiceMatching("AppleSMC"))
+        guard service != 0 else { return nil }
+        defer { IOObjectRelease(service) }
+
+        guard IOServiceOpen(service, mach_task_self_, 0, &connection) == KERN_SUCCESS else {
+            return nil
+        }
+    }
+
+    deinit {
+        if connection != 0 {
+            IOServiceClose(connection)
+        }
+    }
+
+    func readNumeric(_ key: String) -> Double? {
+        guard let value = read(key) else { return nil }
+        return decodeNumeric(value)
+    }
+
+    private func read(_ key: String) -> SMCValue? {
+        var input = SMCKeyData()
+        var output = SMCKeyData()
+        input.key = Self.fourCC(key)
+        input.data8 = smcCmdReadKeyInfo
+
+        guard call(input: &input, output: &output) == KERN_SUCCESS,
+              output.result == 0
+        else {
+            return nil
+        }
+
+        input.keyInfo = output.keyInfo
+        input.data8 = smcCmdReadBytes
+
+        guard call(input: &input, output: &output) == KERN_SUCCESS,
+              output.result == 0
+        else {
+            return nil
+        }
+
+        let size = min(Int(output.keyInfo.dataSize), 32)
+        let bytes = withUnsafeBytes(of: output.bytes) { rawBuffer in
+            Array(rawBuffer.prefix(size))
+        }
+
+        return SMCValue(
+            type: Self.fourCCString(output.keyInfo.dataType),
+            bytes: bytes
+        )
+    }
+
+    private func call(input: inout SMCKeyData, output: inout SMCKeyData) -> kern_return_t {
+        let inputSize = MemoryLayout<SMCKeyData>.stride
+        var outputSize = MemoryLayout<SMCKeyData>.stride
+        return IOConnectCallStructMethod(
+            connection,
+            smcHandleYPCEvent,
+            &input,
+            inputSize,
+            &output,
+            &outputSize
+        )
+    }
+
+    private func decodeNumeric(_ value: SMCValue) -> Double? {
+        let bytes = value.bytes
+
+        switch value.type {
+        case "fpe2":
+            guard bytes.count >= 2 else { return nil }
+            let raw = (UInt16(bytes[0]) << 8) | UInt16(bytes[1])
+            return Double(raw) / 4.0
+        case "flt ":
+            guard bytes.count >= 4 else { return nil }
+            let raw = (UInt32(bytes[0]) << 24) |
+                (UInt32(bytes[1]) << 16) |
+                (UInt32(bytes[2]) << 8) |
+                UInt32(bytes[3])
+            return Double(Float(bitPattern: raw))
+        case "ui8 ":
+            return bytes.first.map(Double.init)
+        case "ui16":
+            guard bytes.count >= 2 else { return nil }
+            return Double((UInt16(bytes[0]) << 8) | UInt16(bytes[1]))
+        case "ui32":
+            guard bytes.count >= 4 else { return nil }
+            return Double((UInt32(bytes[0]) << 24) |
+                (UInt32(bytes[1]) << 16) |
+                (UInt32(bytes[2]) << 8) |
+                UInt32(bytes[3]))
+        default:
+            return nil
+        }
+    }
+
+    private static func fourCC(_ string: String) -> UInt32 {
+        var result: UInt32 = 0
+        for byte in string.utf8.prefix(4) {
+            result = (result << 8) + UInt32(byte)
+        }
+        return result
+    }
+
+    private static func fourCCString(_ value: UInt32) -> String {
+        let bytes = [
+            UInt8((value >> 24) & 0xff),
+            UInt8((value >> 16) & 0xff),
+            UInt8((value >> 8) & 0xff),
+            UInt8(value & 0xff)
+        ].filter { $0 != 0 }
+        return String(bytes: bytes, encoding: .ascii) ?? "????"
     }
 }
 

@@ -10,8 +10,8 @@
 
 公开版本会放在 GitHub Release：
 
-- 下载最新版：`Releases` 页面里的 `DDQs-Cyber-Thermometer-0.1.0.dmg`
-- 当前版本：`v0.1.0`
+- 下载最新版：`Releases` 页面里的 `DDQs-Cyber-Thermometer-0.2.1.dmg`
+- 当前版本：`v0.2.1`
 - 许可证：MIT
 
 安装方式：打开 DMG，把 `动动枪赛博体温计.app` 拖到 `Applications`。
@@ -26,7 +26,7 @@
 - 右侧绿色迷你柱：CPU 占用率
 - 紧贴的数字：核心温度
 - 鼠标悬停：显示完整的内存、CPU、核心温度
-- 点击菜单：刷新或退出
+- 点击菜单：显示风扇当前转速，并支持刷新或退出
 
 ## 介绍页面
 
@@ -49,8 +49,8 @@ Scripts/package-dmg.sh
 生成：
 
 ```text
-dist/DDQs-Cyber-Thermometer-0.1.0.dmg
-dist/DDQs-Cyber-Thermometer-0.1.0.dmg.sha256
+dist/DDQs-Cyber-Thermometer-0.2.1.dmg
+dist/DDQs-Cyber-Thermometer-0.2.1.dmg.sha256
 ```
 
 只构建 App：
@@ -75,6 +75,12 @@ Apple Silicon 机器会优先读取系统里的 `PMU tdie` 温度传感器，并
 - `smc`
 
 如果直接读取和外部命令都失败，顶栏温度会显示 `--`，但内存和 CPU 仍会正常显示。
+
+## 风扇说明
+
+v0.2.1 起，点击顶栏图标后菜单会显示风扇当前转速。工具会优先读取 AppleSMC 风扇键，失败时尝试 `istats` 或 `smc` 命令。
+
+部分 Apple Silicon 机型没有风扇，或系统不向普通 App 暴露风扇转速；这时菜单会显示 `无风扇` 或 `未读取`。
 
 ## 发布到 GitHub
 
