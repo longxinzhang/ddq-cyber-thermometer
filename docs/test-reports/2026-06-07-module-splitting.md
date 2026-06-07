@@ -8,13 +8,14 @@
 - 测试人：Codex
 - macOS 版本：未记录
 - 设备架构：Apple Silicon
-- App 版本：0.4.1
+- App 版本：0.5.0
 
 ## 变更范围
 
 - 将 `Sources/MacHealthGuardian/main.swift` 拆分为 App、Rendering、Updates、LaunchAtLogin 模块文件。
 - 新增 `MacHealthGuardianCore` target，承载 Models、Monitoring、Sensors、Updates、Support 等核心逻辑。
 - 新增 `MacHealthGuardianCoreTestRunner` executable target，覆盖 Core 纯逻辑测试。
+- 合并官方 `v0.5.0`，将 AppleSMC 结构体偏移修复和 `flt` 浮点解码修复迁移到 `MacHealthGuardianCore/Sensors/AppleSMC/AppleSMCReader.swift`。
 - 新增并更新设计文档、测试规范和本测试报告。
 
 ## 测试结论
@@ -55,7 +56,7 @@
 
 - 菜单栏 UI 未手动启动验证；本次只验证编译和命令行模式。
 - 更新安装脚本未执行真实 ZIP/DMG 替换安装，只验证编译。
-- AppleSMC、HID 温度和风扇读取受硬件环境影响，本次只通过 `--sample` 做运行验证。
+- AppleSMC、HID 温度和风扇读取受硬件环境影响，本次只通过 `--sample` 做运行验证；官方 v0.5.0 的 SMC 结构修复已迁移到 Core 模块。
 - 标准 `swift test` 尚未恢复，需要安装或切换到包含 `XCTest` / Swift `Testing` 的完整 Xcode/Swift 工具链后再迁移。
 
 ## 附件

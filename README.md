@@ -10,8 +10,8 @@
 
 公开版本会放在 GitHub Release：
 
-- 下载最新版：`Releases` 页面里的 `DDQs-Cyber-Thermometer-0.4.1.dmg`
-- 当前版本：`v0.4.1`
+- 下载最新版：`Releases` 页面里的 `DDQs-Cyber-Thermometer-0.5.0.dmg`
+- 当前版本：`v0.5.0`
 - 许可证：MIT
 
 安装方式：打开 DMG，把 `动动枪赛博体温计.app` 拖到 `Applications`。
@@ -59,10 +59,10 @@ Scripts/package-dmg.sh
 生成：
 
 ```text
-dist/DDQs-Cyber-Thermometer-0.4.1.dmg
-dist/DDQs-Cyber-Thermometer-0.4.1.dmg.sha256
-dist/DDQs-Cyber-Thermometer-0.4.1.app.zip
-dist/DDQs-Cyber-Thermometer-0.4.1.app.zip.sha256
+dist/DDQs-Cyber-Thermometer-0.5.0.dmg
+dist/DDQs-Cyber-Thermometer-0.5.0.dmg.sha256
+dist/DDQs-Cyber-Thermometer-0.5.0.app.zip
+dist/DDQs-Cyber-Thermometer-0.5.0.app.zip.sha256
 ```
 
 只构建 App：
@@ -91,6 +91,8 @@ Apple Silicon 机器会优先读取系统里的 `PMU tdie` 温度传感器，并
 ## 风扇说明
 
 v0.2.1 起，点击顶栏图标后菜单会显示风扇当前转速。工具会优先读取 AppleSMC 风扇键，失败时尝试 `istats` 或 `smc` 命令。
+
+v0.5.0 修复了 macOS 26.4 / Apple Silicon M5 机型上 AppleSMC 风扇读取结构偏移和 `flt` 浮点解码问题。
 
 部分 Apple Silicon 机型没有风扇，或系统不向普通 App 暴露风扇转速；这时菜单会显示 `无风扇` 或 `未读取`。
 

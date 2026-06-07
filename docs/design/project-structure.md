@@ -37,8 +37,19 @@ DDQ's Cyber Thermometer，中文名“动动枪赛博体温计”，是一个 ma
 │   ├── package-dmg.sh
 │   └── publish-github.sh
 ├── Sources/
-│   └── MacHealthGuardian/
-│       └── main.swift
+│   ├── MacHealthGuardian/
+│   │   ├── App/
+│   │   ├── LaunchAtLogin/
+│   │   ├── Rendering/
+│   │   └── Updates/
+│   └── MacHealthGuardianCore/
+│       ├── Models/
+│       ├── Monitoring/
+│       ├── Sensors/
+│       ├── Support/
+│       └── Updates/
+├── Tests/
+│   └── MacHealthGuardianCoreTestRunner/
 └── docs/
     ├── assets/
     │   ├── app-icon.png
@@ -51,6 +62,8 @@ DDQ's Cyber Thermometer，中文名“动动枪赛博体温计”，是一个 ma
     │   ├── project-structure.md
     │   ├── test-report-template.md
     │   └── testing-guidelines.md
+    ├── test-reports/
+    │   └── 2026-06-07-module-splitting.md
     └── index.html
 ```
 
@@ -60,23 +73,38 @@ DDQ's Cyber Thermometer，中文名“动动枪赛博体温计”，是一个 ma
 
 ### `Package.swift`
 
-Swift Package 配置。当前只定义一个可执行产物 `MacHealthGuardian`，目标同名，链接 `IOKit` 和 `ServiceManagement` 框架。
+Swift Package 配置。当前定义：
+
+- `MacHealthGuardian`：菜单栏 App 可执行产物，依赖 `MacHealthGuardianCore`，链接 `ServiceManagement`。
+- `MacHealthGuardianCore`：核心逻辑库，承载模型、监控、传感器、更新解析和支持工具，链接 `IOKit`。
+- `MacHealthGuardianCoreTestRunner`：过渡期测试 runner，用于当前工具链缺少 `XCTest` / Swift `Testing` 模块时验证核心逻辑。
 
 ### `Info.plist`
 
-App Bundle 元信息。当前 bundle 标识为 `com.dongdongqiang.cyber-thermometer`，展示名为“动动枪赛博体温计”，版本为 `0.4.1`。`LSUIElement` 为 `true`，表示 App 作为菜单栏应用运行，不显示 Dock 图标。
+App Bundle 元信息。当前 bundle 标识为 `com.dongdongqiang.cyber-thermometer`，展示名为“动动枪赛博体温计”，版本为 `0.5.0`。`LSUIElement` 为 `true`，表示 App 作为菜单栏应用运行，不显示 Dock 图标。
 
-### `Sources/MacHealthGuardian/main.swift`
+### `Sources/MacHealthGuardian/`
 
-项目核心代码目前集中在单个 Swift 文件中，包含：
+App target，负责菜单栏应用入口和用户界面相关逻辑：
 
-- `MacHealthGuardianApp`：SwiftUI App 入口，支持 `--help`、`--sample` 和 `--doctor` 命令行模式。
-- `AppDelegate`：配置菜单栏状态项、菜单项、刷新、退出、检查更新和开机启动入口。
-- `SystemMonitor` / `SystemSampler`：定时采样系统状态，读取内存、CPU、温度、风扇和热状态。
-- `StatusImageRenderer`：绘制顶栏小组件图像，包含内存/CPU 双柱和温度文字。
-- `LaunchAtLoginController`：通过 `SMAppService.mainApp` 管理开机启动。
-- `UpdateController`：通过 GitHub Release Atom feed 和 `/releases/latest` redirect 获取最新版本，选择 `.app.zip` 或 `.dmg` 更新包，下载并校验 SHA256，然后执行替换安装。
-- Release 与更新相关模型：`ReleaseAtomParser`、`GitHubRelease`、`GitHubReleaseAsset`、`ReleaseVersion`、`UpdateError` 等。
+- `App/`：SwiftUI App 入口、`AppDelegate` 和命令行模式。
+- `Rendering/`：状态栏图像绘制。
+- `Updates/`：更新检查 UI 流程和 ZIP/DMG 安装脚本执行。
+- `LaunchAtLogin/`：通过 `SMAppService.mainApp` 管理开机启动。
+
+### `Sources/MacHealthGuardianCore/`
+
+Core target，负责可复用、可测试的核心逻辑：
+
+- `Models/`：`SystemSnapshot`、`MemorySnapshot`、`FanSpeedSnapshot` 等值对象。
+- `Monitoring/`：定时刷新、CPU/内存采样、`vm_stat` 解析。
+- `Sensors/`：Apple Silicon 温度、AppleSMC 风扇、外部命令 fallback。
+- `Updates/`：Release Atom 解析、版本比较、资产选择、更新错误模型。
+- `Support/`：Shell 调用、字符串转义、时间/百分比/容量格式化。
+
+### `Tests/MacHealthGuardianCoreTestRunner/`
+
+过渡期测试 runner。当前本机工具链缺少 `XCTest` 和 Swift `Testing` 模块，因此暂用可执行测试 runner 覆盖核心纯逻辑。后续切换到完整测试工具链后，应迁移为标准 `.testTarget` 和 `swift test`。
 
 ### `Scripts/`
 
@@ -99,11 +127,11 @@ App Bundle 元信息。当前 bundle 标识为 `com.dongdongqiang.cyber-thermome
 ### `README.md` 与 `RELEASE_NOTES.md`
 
 - `README.md`：面向使用者和维护者的项目说明，包含下载、功能、打包、温度/风扇说明、在线升级和发布方式。
-- `RELEASE_NOTES.md`：当前版本发布说明，描述 v0.4.1 的功能和安装信息。
+- `RELEASE_NOTES.md`：当前版本发布说明，描述 v0.5.0 的功能和安装信息。
 
 ## 当前代码组织特点
 
-- 业务逻辑高度集中在 `main.swift`，当前约 1780 行，适合小型工具早期快速迭代，但后续需要按模块拆分。
-- 菜单栏 UI、采样逻辑、更新逻辑和系统集成逻辑已经具备相对清晰的类型边界，但尚未拆分到多个源码文件。
+- 旧的 `main.swift` 已按模块拆分，App target 与 Core target 分离。
+- 菜单栏 UI、采样逻辑、更新逻辑和系统集成逻辑已经拆到独立目录，后续可继续收敛文件边界和补标准测试 target。
 - 打包链路由 shell 脚本驱动，构建产物和发布资产都从 `Info.plist` 读取版本号或使用脚本内固定版本信息。
 - 静态官网资源和设计文档都位于 `docs/` 下，后续需要注意 GitHub Pages 发布路径是否要包含或隐藏设计文档。

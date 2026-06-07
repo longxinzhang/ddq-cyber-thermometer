@@ -28,6 +28,7 @@ struct SMCKeyData {
     var vers = SMCKeyDataVers()
     var pLimitData = SMCKeyDataPLimitData()
     var keyInfo = SMCKeyDataKeyInfo()
+    var padding: UInt16 = 0
     var result: UInt8 = 0
     var status: UInt8 = 0
     var data8: UInt8 = 0
@@ -87,8 +88,10 @@ final class AppleSMCReader: @unchecked Sendable {
             return nil
         }
 
-        input.keyInfo = output.keyInfo
+        let keyInfo = output.keyInfo
+        input.keyInfo = keyInfo
         input.data8 = smcCmdReadBytes
+        output = SMCKeyData()
 
         guard call(input: &input, output: &output) == KERN_SUCCESS,
               output.result == 0
@@ -96,13 +99,13 @@ final class AppleSMCReader: @unchecked Sendable {
             return nil
         }
 
-        let size = min(Int(output.keyInfo.dataSize), 32)
+        let size = min(Int(keyInfo.dataSize), 32)
         let bytes = withUnsafeBytes(of: output.bytes) { rawBuffer in
             Array(rawBuffer.prefix(size))
         }
 
         return SMCValue(
-            type: Self.fourCCString(output.keyInfo.dataType),
+            type: Self.fourCCString(keyInfo.dataType),
             bytes: bytes
         )
     }
@@ -130,11 +133,9 @@ final class AppleSMCReader: @unchecked Sendable {
             return Double(raw) / 4.0
         case "flt ":
             guard bytes.count >= 4 else { return nil }
-            let raw = (UInt32(bytes[0]) << 24) |
-                (UInt32(bytes[1]) << 16) |
-                (UInt32(bytes[2]) << 8) |
-                UInt32(bytes[3])
-            return Double(Float(bitPattern: raw))
+            return bytes.withUnsafeBytes { rawBuffer in
+                Double(rawBuffer.loadUnaligned(as: Float.self))
+            }
         case "ui8 ":
             return bytes.first.map(Double.init)
         case "ui16":
