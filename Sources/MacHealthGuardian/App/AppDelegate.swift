@@ -7,15 +7,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let renderer = StatusImageRenderer()
     private let updateController = UpdateController()
     private let launchAtLoginController = LaunchAtLoginController()
+    private let displaySettings = MenuBarDisplaySettings()
     private let menu = NSMenu()
+    private let memoryPressureItem = NSMenuItem(title: "内存压力 --", action: nil, keyEquivalent: "")
     private let memoryItem = NSMenuItem(title: "内存 --", action: nil, keyEquivalent: "")
     private let cpuItem = NSMenuItem(title: "CPU --", action: nil, keyEquivalent: "")
     private let temperatureItem = NSMenuItem(title: "核心温度 --", action: nil, keyEquivalent: "")
     private let fanItem = NSMenuItem(title: "风扇转速 --", action: nil, keyEquivalent: "")
     private let updatedItem = NSMenuItem(title: "等待刷新", action: nil, keyEquivalent: "")
+    private let displayHeaderItem = NSMenuItem(title: "菜单栏显示", action: nil, keyEquivalent: "")
+    private let memoryPressureDisplayItem = NSMenuItem(title: MenuBarDisplayMetric.memoryPressure.title, action: nil, keyEquivalent: "")
+    private let memoryUsageDisplayItem = NSMenuItem(title: MenuBarDisplayMetric.memoryUsage.title, action: nil, keyEquivalent: "")
+    private let cpuUsageDisplayItem = NSMenuItem(title: MenuBarDisplayMetric.cpuUsage.title, action: nil, keyEquivalent: "")
+    private let versionItem = NSMenuItem(title: AppVersion.menuTitle, action: nil, keyEquivalent: "")
     private let launchAtLoginItem = NSMenuItem(title: "开机启动", action: nil, keyEquivalent: "")
     private let updateItem = NSMenuItem(title: "检查更新…", action: nil, keyEquivalent: "")
     private var statusItem: NSStatusItem?
+    private var latestSnapshot = SystemSnapshot.placeholder
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -31,6 +39,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             button.toolTip = SystemSnapshot.placeholder.toolTipText
             let image = renderer.image(
                 for: .placeholder,
+                displayMetrics: displaySettings.metrics,
                 appearance: button.effectiveAppearance
             )
             statusItem.length = image.size.width
@@ -46,15 +55,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private func configureMenu() {
         menu.delegate = self
 
-        [memoryItem, cpuItem, temperatureItem, fanItem, updatedItem].forEach { item in
+        [memoryPressureItem, memoryItem, cpuItem, temperatureItem, fanItem, updatedItem].forEach { item in
             item.isEnabled = false
         }
 
+        menu.addItem(memoryPressureItem)
         menu.addItem(memoryItem)
         menu.addItem(cpuItem)
         menu.addItem(temperatureItem)
         menu.addItem(fanItem)
         menu.addItem(updatedItem)
+        menu.addItem(.separator())
+
+        displayHeaderItem.isEnabled = false
+        menu.addItem(displayHeaderItem)
+        configureDisplayToggle(memoryPressureDisplayItem, metric: .memoryPressure)
+        configureDisplayToggle(memoryUsageDisplayItem, metric: .memoryUsage)
+        configureDisplayToggle(cpuUsageDisplayItem, metric: .cpuUsage)
+        menu.addItem(memoryPressureDisplayItem)
+        menu.addItem(memoryUsageDisplayItem)
+        menu.addItem(cpuUsageDisplayItem)
         menu.addItem(.separator())
 
         launchAtLoginItem.action = #selector(toggleLaunchAtLogin)
@@ -72,6 +92,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         )
         refreshItem.target = self
         menu.addItem(refreshItem)
+        menu.addItem(.separator())
+
+        versionItem.isEnabled = false
+        menu.addItem(versionItem)
 
         let quitItem = NSMenuItem(
             title: "退出",
@@ -84,16 +108,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     func menuWillOpen(_ menu: NSMenu) {
         updateLaunchAtLoginMenuItem()
+        updateDisplayMenuItems()
     }
 
     private func render(_ snapshot: SystemSnapshot) {
         guard let button = statusItem?.button else { return }
 
-        let image = renderer.image(for: snapshot, appearance: button.effectiveAppearance)
+        latestSnapshot = snapshot
+        let image = renderer.image(
+            for: snapshot,
+            displayMetrics: displaySettings.metrics,
+            appearance: button.effectiveAppearance
+        )
         statusItem?.length = image.size.width
         button.toolTip = snapshot.toolTipText
         button.image = image
 
+        memoryPressureItem.title = "内存压力 \(snapshot.memory.pressure.level.displayText)  \(snapshot.memory.pressure.scoreText)"
         memoryItem.title = "内存占用 \(snapshot.memory.usedPercent.percentText)  \(snapshot.memory.usedGB.gbText) / \(snapshot.memory.totalGB.gbText)"
         cpuItem.title = "CPU 占用 \(snapshot.cpuUsage.percentText)"
         temperatureItem.title = "核心温度 \(snapshot.temperatureText)  \(snapshot.thermalStateText)"
@@ -103,6 +134,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     @objc private func refreshNow() {
         monitor.refresh()
+    }
+
+    @objc private func toggleDisplayMetric(_ sender: NSMenuItem) {
+        guard let rawMetric = sender.representedObject as? String,
+              let metric = MenuBarDisplayMetric(rawValue: rawMetric)
+        else {
+            return
+        }
+
+        displaySettings.toggle(metric)
+        updateDisplayMenuItems()
+        render(latestSnapshot)
     }
 
     @objc private func toggleLaunchAtLogin() {
@@ -121,6 +164,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     @objc private func quit() {
         NSApplication.shared.terminate(nil)
+    }
+
+    private func configureDisplayToggle(_ item: NSMenuItem, metric: MenuBarDisplayMetric) {
+        item.action = #selector(toggleDisplayMetric)
+        item.target = self
+        item.representedObject = metric.rawValue
+    }
+
+    private func updateDisplayMenuItems() {
+        updateDisplayMenuItem(memoryPressureDisplayItem, metric: .memoryPressure)
+        updateDisplayMenuItem(memoryUsageDisplayItem, metric: .memoryUsage)
+        updateDisplayMenuItem(cpuUsageDisplayItem, metric: .cpuUsage)
+    }
+
+    private func updateDisplayMenuItem(_ item: NSMenuItem, metric: MenuBarDisplayMetric) {
+        item.state = displaySettings.isEnabled(metric) ? .on : .off
+        item.isEnabled = displaySettings.canDisable(metric)
     }
 
     private func updateLaunchAtLoginMenuItem() {

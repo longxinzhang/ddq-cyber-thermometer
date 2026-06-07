@@ -4,17 +4,23 @@ import MacHealthGuardianCore
 final class StatusImageRenderer {
     private let height: CGFloat = 22
     private let temperatureFont = NSFont.monospacedDigitSystemFont(ofSize: 13.2, weight: .semibold)
+    private let defaultMetrics: [MenuBarDisplayMetric] = [.memoryPressure, .memoryUsage, .cpuUsage]
 
     var placeholderSize: NSSize {
-        NSSize(width: 38, height: height)
+        NSSize(width: 43, height: height)
     }
 
-    func image(for snapshot: SystemSnapshot, appearance: NSAppearance) -> NSImage {
-        let image = NSImage(size: imageSize(for: snapshot))
+    func image(
+        for snapshot: SystemSnapshot,
+        displayMetrics: [MenuBarDisplayMetric],
+        appearance: NSAppearance
+    ) -> NSImage {
+        let metrics = normalizedMetrics(displayMetrics)
+        let image = NSImage(size: imageSize(for: snapshot, displayMetrics: metrics))
         image.lockFocus()
 
         appearance.performAsCurrentDrawingAppearance {
-            draw(snapshot, size: image.size)
+            draw(snapshot, displayMetrics: metrics, size: image.size)
         }
 
         image.unlockFocus()
@@ -22,36 +28,37 @@ final class StatusImageRenderer {
         return image
     }
 
-    private func imageSize(for snapshot: SystemSnapshot) -> NSSize {
+    private func imageSize(for snapshot: SystemSnapshot, displayMetrics: [MenuBarDisplayMetric]) -> NSSize {
         let attributes: [NSAttributedString.Key: Any] = [.font: temperatureFont]
         let textWidth = ceil(snapshot.temperatureShortText.size(withAttributes: attributes).width)
-        return NSSize(width: max(38, 17 + textWidth + 1), height: height)
+        let textX = textStartX(metricCount: displayMetrics.count)
+        return NSSize(width: max(38, textX + textWidth + 1), height: height)
     }
 
-    private func draw(_ snapshot: SystemSnapshot, size: NSSize) {
+    private func draw(_ snapshot: SystemSnapshot, displayMetrics: [MenuBarDisplayMetric], size: NSSize) {
         NSColor.clear.setFill()
         NSRect(origin: .zero, size: size).fill()
 
-        drawCombinedBars(
-            memoryFraction: snapshot.memory.usedPercent / 100,
-            cpuFraction: snapshot.cpuUsage / 100,
+        drawMetricBars(
+            displayMetrics,
+            snapshot: snapshot,
             x: 1,
             y: 4
         )
         drawTemperatureText(
             snapshot.temperatureShortText,
             temperature: snapshot.coreTemperatureC,
-            x: 17
+            x: textStartX(metricCount: displayMetrics.count)
         )
     }
 
-    private func drawCombinedBars(
-        memoryFraction: Double,
-        cpuFraction: Double,
+    private func drawMetricBars(
+        _ metrics: [MenuBarDisplayMetric],
+        snapshot: SystemSnapshot,
         x: CGFloat,
         y: CGFloat
     ) {
-        let trackRect = NSRect(x: x, y: y, width: 13, height: 14)
+        let trackRect = NSRect(x: x, y: y, width: barGroupWidth(metricCount: metrics.count), height: 14)
         let trackPath = NSBezierPath(roundedRect: trackRect, xRadius: 2.5, yRadius: 2.5)
 
         NSColor.separatorColor.withAlphaComponent(0.58).setStroke()
@@ -62,26 +69,33 @@ final class StatusImageRenderer {
 
         let innerRect = trackRect.insetBy(dx: 1.5, dy: 1.5)
         let gap: CGFloat = 1.5
-        let columnWidth = (innerRect.width - gap) / 2
+        let columnWidth = (innerRect.width - gap * CGFloat(metrics.count - 1)) / CGFloat(metrics.count)
 
-        NSColor.separatorColor.withAlphaComponent(0.32).setFill()
-        NSRect(
-            x: innerRect.midX - 0.5,
-            y: innerRect.minY + 1,
-            width: 1,
-            height: innerRect.height - 2
-        ).fill()
+        if metrics.count > 1 {
+            NSColor.separatorColor.withAlphaComponent(0.32).setFill()
+            for index in 1..<metrics.count {
+                let separatorX = innerRect.minX
+                    + CGFloat(index) * columnWidth
+                    + CGFloat(index - 1) * gap
+                    + gap / 2
+                    - 0.5
+                NSRect(
+                    x: separatorX,
+                    y: innerRect.minY + 1,
+                    width: 1,
+                    height: innerRect.height - 2
+                ).fill()
+            }
+        }
 
-        drawBarColumn(
-            fraction: memoryFraction,
-            color: memoryColor(memoryFraction * 100),
-            rect: NSRect(x: innerRect.minX, y: innerRect.minY, width: columnWidth, height: innerRect.height)
-        )
-        drawBarColumn(
-            fraction: cpuFraction,
-            color: cpuColor(cpuFraction * 100),
-            rect: NSRect(x: innerRect.minX + columnWidth + gap, y: innerRect.minY, width: columnWidth, height: innerRect.height)
-        )
+        for (index, metric) in metrics.enumerated() {
+            let x = innerRect.minX + CGFloat(index) * (columnWidth + gap)
+            drawBarColumn(
+                fraction: fraction(for: metric, snapshot: snapshot),
+                color: color(for: metric, snapshot: snapshot),
+                rect: NSRect(x: x, y: innerRect.minY, width: columnWidth, height: innerRect.height)
+            )
+        }
     }
 
     private func drawBarColumn(fraction: Double, color: NSColor, rect: NSRect) {
@@ -105,6 +119,60 @@ final class StatusImageRenderer {
             at: NSPoint(x: x, y: 3),
             withAttributes: attributes
         )
+    }
+
+    private func normalizedMetrics(_ metrics: [MenuBarDisplayMetric]) -> [MenuBarDisplayMetric] {
+        let selected = Set(metrics)
+        let normalized = MenuBarDisplayMetric.allCases.filter { selected.contains($0) }
+        return normalized.isEmpty ? defaultMetrics : normalized
+    }
+
+    private func barGroupWidth(metricCount: Int) -> CGFloat {
+        switch metricCount {
+        case 1:
+            return 10
+        case 2:
+            return 13
+        default:
+            return 18
+        }
+    }
+
+    private func textStartX(metricCount: Int) -> CGFloat {
+        1 + barGroupWidth(metricCount: metricCount) + 3
+    }
+
+    private func fraction(for metric: MenuBarDisplayMetric, snapshot: SystemSnapshot) -> Double {
+        switch metric {
+        case .memoryPressure:
+            return snapshot.memory.pressure.score / 100
+        case .memoryUsage:
+            return snapshot.memory.usedPercent / 100
+        case .cpuUsage:
+            return snapshot.cpuUsage / 100
+        }
+    }
+
+    private func color(for metric: MenuBarDisplayMetric, snapshot: SystemSnapshot) -> NSColor {
+        switch metric {
+        case .memoryPressure:
+            return memoryPressureColor(snapshot.memory.pressure.level)
+        case .memoryUsage:
+            return memoryColor(snapshot.memory.usedPercent)
+        case .cpuUsage:
+            return cpuColor(snapshot.cpuUsage)
+        }
+    }
+
+    private func memoryPressureColor(_ level: MemoryPressureLevel) -> NSColor {
+        switch level {
+        case .normal:
+            return .systemGreen
+        case .warning:
+            return .systemOrange
+        case .critical:
+            return .systemRed
+        }
     }
 
     private func memoryColor(_ percent: Double) -> NSColor {

@@ -50,12 +50,16 @@ public struct SystemSnapshot: Sendable {
     }
 
     public var toolTipText: String {
-        "内存 \(memory.usedPercent.percentText)  CPU \(cpuUsage.percentText)  核心温度 \(temperatureText)"
+        "内存压力 \(memory.pressure.scoreText)  内存 \(memory.usedPercent.percentText)  CPU \(cpuUsage.percentText)  核心温度 \(temperatureText)"
     }
 
     public var summaryText: String {
         [
+            "内存压力: \(memory.pressure.level.displayText) \(memory.pressure.scoreText)",
             "内存占用: \(memory.usedPercent.percentText) (\(memory.usedGB.gbText) / \(memory.totalGB.gbText))",
+            "可用内存: \(memory.availableGB.gbText)",
+            "压缩内存: \(memory.compressedGB.gbText)",
+            "交换空间: \(memory.pressure.swapUsedGB.gbText)",
             "CPU 占用: \(cpuUsage.percentText)",
             "核心温度: \(temperatureText)",
             "风扇转速: \(fan.displayText)",

@@ -7,6 +7,7 @@
 - [项目结构与现状](project-structure.md)：项目定位、用途、目录结构和关键模块说明。
 - [工程规范](engineering-standards.md)：模块拆分、文件规模控制、PR 边界和文档同步要求。
 - [模块化拆分设计](module-splitting-design.md)：当前单文件结构的模块化目标、目录方案、功能保留清单和拆分步骤。
+- [内存压力展示与菜单栏配置设计](memory-pressure-display-design.md)：新增内存压力进度条、菜单栏展示开关、压力计算和测试方案。
 - [测试规范](testing-guidelines.md)：测试分层、PR 最低测试要求、正确性和功能性验证标准。
 - [测试报告模板](test-report-template.md)：PR 测试报告的推荐格式。
 
