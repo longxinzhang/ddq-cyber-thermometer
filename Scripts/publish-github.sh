@@ -3,11 +3,11 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 REPO_NAME="${GITHUB_REPO_NAME:-ddq-cyber-thermometer}"
-TAG="v0.4.1"
-TITLE="DDQ's Cyber Thermometer v0.4.1"
-DMG="$ROOT_DIR/dist/DDQs-Cyber-Thermometer-0.4.1.dmg"
+TAG="v0.5.0"
+TITLE="DDQ's Cyber Thermometer v0.5.0"
+DMG="$ROOT_DIR/dist/DDQs-Cyber-Thermometer-0.5.0.dmg"
 DMG_SHA="$DMG.sha256"
-ZIP="$ROOT_DIR/dist/DDQs-Cyber-Thermometer-0.4.1.app.zip"
+ZIP="$ROOT_DIR/dist/DDQs-Cyber-Thermometer-0.5.0.app.zip"
 ZIP_SHA="$ZIP.sha256"
 
 cd "$ROOT_DIR"
