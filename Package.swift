@@ -11,15 +11,33 @@ let package = Package(
         .executable(
             name: "MacHealthGuardian",
             targets: ["MacHealthGuardian"]
+        ),
+        .library(
+            name: "MacHealthGuardianCore",
+            targets: ["MacHealthGuardianCore"]
         )
     ],
     targets: [
         .executableTarget(
             name: "MacHealthGuardian",
+            dependencies: ["MacHealthGuardianCore"],
             linkerSettings: [
-                .linkedFramework("IOKit"),
                 .linkedFramework("ServiceManagement")
             ]
+        ),
+        .target(
+            name: "MacHealthGuardianCore",
+            linkerSettings: [
+                .linkedFramework("IOKit")
+            ]
+        ),
+        .testTarget(
+            name: "MacHealthGuardianCoreTests",
+            dependencies: ["MacHealthGuardianCore"]
+        ),
+        .testTarget(
+            name: "MacHealthGuardianTests",
+            dependencies: ["MacHealthGuardian", "MacHealthGuardianCore"]
         )
     ]
 )
