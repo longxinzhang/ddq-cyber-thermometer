@@ -184,7 +184,7 @@ func drawDownloadPill(in rect: NSRect) {
     let path = NSBezierPath(roundedRect: rect, xRadius: 8, yRadius: 8)
     NSColor(calibratedRed: 0.68, green: 0.93, blue: 0.9, alpha: 1).setFill()
     path.fill()
-    drawText("下载 v0.2.1", in: NSRect(x: rect.minX + 30, y: rect.minY + 14, width: rect.width - 60, height: 24), font: .systemFont(ofSize: 20, weight: .bold), color: NSColor(calibratedRed: 0.04, green: 0.1, blue: 0.1, alpha: 1))
+    drawText("下载 v0.3.0", in: NSRect(x: rect.minX + 30, y: rect.minY + 14, width: rect.width - 60, height: 24), font: .systemFont(ofSize: 20, weight: .bold), color: NSColor(calibratedRed: 0.04, green: 0.1, blue: 0.1, alpha: 1))
 }
 
 func drawThermometer(size: CGFloat, origin: CGPoint) {

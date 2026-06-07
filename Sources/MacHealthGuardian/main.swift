@@ -1,4 +1,5 @@
 import AppKit
+import CryptoKit
 import Darwin
 import Foundation
 import IOKit
@@ -42,12 +43,14 @@ struct MacHealthGuardianApp: App {
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let monitor = SystemMonitor()
     private let renderer = StatusImageRenderer()
+    private let updateController = UpdateController()
     private let menu = NSMenu()
     private let memoryItem = NSMenuItem(title: "内存 --", action: nil, keyEquivalent: "")
     private let cpuItem = NSMenuItem(title: "CPU --", action: nil, keyEquivalent: "")
     private let temperatureItem = NSMenuItem(title: "核心温度 --", action: nil, keyEquivalent: "")
     private let fanItem = NSMenuItem(title: "风扇转速 --", action: nil, keyEquivalent: "")
     private let updatedItem = NSMenuItem(title: "等待刷新", action: nil, keyEquivalent: "")
+    private let updateItem = NSMenuItem(title: "检查更新…", action: nil, keyEquivalent: "")
     private var statusItem: NSStatusItem?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -88,6 +91,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(updatedItem)
         menu.addItem(.separator())
 
+        updateItem.action = #selector(checkForUpdates)
+        updateItem.target = self
+        menu.addItem(updateItem)
+
         let refreshItem = NSMenuItem(
             title: "刷新",
             action: #selector(refreshNow),
@@ -124,8 +131,452 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         monitor.refresh()
     }
 
+    @objc private func checkForUpdates() {
+        updateController.checkForUpdates(menuItem: updateItem)
+    }
+
     @objc private func quit() {
         NSApplication.shared.terminate(nil)
+    }
+}
+
+@MainActor
+final class UpdateController {
+    private let owner = "longxinzhang"
+    private let repository = "ddq-cyber-thermometer"
+    private let assetPrefix = "DDQs-Cyber-Thermometer"
+    private let appBundleName = "动动枪赛博体温计.app"
+    private var isChecking = false
+
+    func checkForUpdates(menuItem: NSMenuItem) {
+        guard !isChecking else { return }
+
+        isChecking = true
+        let originalTitle = menuItem.title
+        menuItem.title = "正在检查更新…"
+        menuItem.isEnabled = false
+
+        Task { @MainActor in
+            defer {
+                menuItem.title = originalTitle
+                menuItem.isEnabled = true
+                isChecking = false
+            }
+
+            do {
+                let release = try await fetchLatestRelease()
+                try await handle(release: release, menuItem: menuItem)
+            } catch {
+                showError(error)
+            }
+        }
+    }
+
+    private func handle(release: GitHubRelease, menuItem: NSMenuItem) async throws {
+        let currentVersion = currentAppVersion()
+        let latestVersion = release.versionText
+
+        guard ReleaseVersion(latestVersion) > ReleaseVersion(currentVersion) else {
+            showUpToDate(currentVersion: currentVersion, release: release)
+            return
+        }
+
+        guard let dmgAsset = release.preferredDMGAsset(prefix: assetPrefix, version: latestVersion) else {
+            showMissingInstaller(release: release, version: latestVersion)
+            return
+        }
+
+        guard askToInstall(release: release, currentVersion: currentVersion, latestVersion: latestVersion) else {
+            return
+        }
+
+        menuItem.title = "正在下载更新…"
+        let downloadedDMG = try await downloadAndVerify(asset: dmgAsset, release: release)
+
+        menuItem.title = "正在准备安装…"
+        try startInstaller(dmgURL: downloadedDMG)
+    }
+
+    private func fetchLatestRelease() async throws -> GitHubRelease {
+        guard let url = URL(string: "https://api.github.com/repos/\(owner)/\(repository)/releases/latest") else {
+            throw UpdateError.invalidReleaseURL
+        }
+
+        var request = URLRequest(url: url)
+        request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
+        request.setValue("DDQ-Cyber-Thermometer/\(currentAppVersion())", forHTTPHeaderField: "User-Agent")
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        try validate(response: response)
+
+        let decoder = JSONDecoder()
+        return try decoder.decode(GitHubRelease.self, from: data)
+    }
+
+    private func downloadAndVerify(asset: GitHubReleaseAsset, release: GitHubRelease) async throws -> URL {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("DDQCyberThermometerUpdates", isDirectory: true)
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+
+        let dmgURL = try await download(asset: asset, into: directory)
+
+        var expectedChecksum = normalizedSHA256(asset.digest)
+        if let checksumAsset = release.checksumAsset(for: asset) {
+            let checksumURL = try await download(asset: checksumAsset, into: directory)
+            let checksumText = try String(contentsOf: checksumURL, encoding: .utf8)
+            guard let checksum = normalizedSHA256(checksumText) else {
+                throw UpdateError.invalidChecksumFile
+            }
+            expectedChecksum = checksum
+        }
+
+        if let expectedChecksum {
+            let actualChecksum = try sha256Hex(for: dmgURL)
+            guard actualChecksum == expectedChecksum else {
+                throw UpdateError.checksumMismatch(expected: expectedChecksum, actual: actualChecksum)
+            }
+        }
+
+        return dmgURL
+    }
+
+    private func download(asset: GitHubReleaseAsset, into directory: URL) async throws -> URL {
+        var request = URLRequest(url: asset.browserDownloadURL)
+        request.setValue("DDQ-Cyber-Thermometer/\(currentAppVersion())", forHTTPHeaderField: "User-Agent")
+
+        let (temporaryURL, response) = try await URLSession.shared.download(for: request)
+        try validate(response: response)
+
+        let safeName = (asset.name as NSString).lastPathComponent
+        let destinationURL = directory.appendingPathComponent(safeName)
+        if FileManager.default.fileExists(atPath: destinationURL.path) {
+            try FileManager.default.removeItem(at: destinationURL)
+        }
+        try FileManager.default.moveItem(at: temporaryURL, to: destinationURL)
+        return destinationURL
+    }
+
+    private func validate(response: URLResponse) throws {
+        guard let httpResponse = response as? HTTPURLResponse else { return }
+        guard (200..<300).contains(httpResponse.statusCode) else {
+            throw UpdateError.httpStatus(httpResponse.statusCode)
+        }
+    }
+
+    private func askToInstall(release: GitHubRelease, currentVersion: String, latestVersion: String) -> Bool {
+        let alert = NSAlert()
+        alert.alertStyle = .informational
+        alert.messageText = "发现新版本 v\(latestVersion)"
+        alert.informativeText = "当前版本 v\(currentVersion)。下载后会自动校验安装包，退出当前 App，替换为新版后重新打开。"
+        alert.addButton(withTitle: "下载并安装")
+        alert.addButton(withTitle: "稍后")
+        alert.addButton(withTitle: "打开 Release")
+        alert.accessoryView = releaseNotesView(text: release.bodyText)
+
+        NSApp.activate(ignoringOtherApps: true)
+        let response = alert.runModal()
+        if response == .alertThirdButtonReturn {
+            NSWorkspace.shared.open(release.htmlURL)
+            return false
+        }
+        return response == .alertFirstButtonReturn
+    }
+
+    private func showUpToDate(currentVersion: String, release: GitHubRelease) {
+        let alert = NSAlert()
+        alert.alertStyle = .informational
+        alert.messageText = "已经是最新版本"
+        alert.informativeText = "当前版本 v\(currentVersion)，GitHub 最新版本是 \(release.tagName)。"
+        alert.addButton(withTitle: "好")
+
+        NSApp.activate(ignoringOtherApps: true)
+        alert.runModal()
+    }
+
+    private func showMissingInstaller(release: GitHubRelease, version: String) {
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = "没有找到可安装的 DMG"
+        alert.informativeText = "GitHub 最新版本是 v\(version)，但 Release 里没有找到 \(assetPrefix)-\(version).dmg。"
+        alert.addButton(withTitle: "打开 Release")
+        alert.addButton(withTitle: "好")
+
+        NSApp.activate(ignoringOtherApps: true)
+        if alert.runModal() == .alertFirstButtonReturn {
+            NSWorkspace.shared.open(release.htmlURL)
+        }
+    }
+
+    private func showManualInstall(dmgURL: URL) {
+        NSWorkspace.shared.open(dmgURL)
+
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = "需要手动安装"
+        alert.informativeText = "当前运行的不是 .app 包，无法自动替换。已打开下载好的 DMG，请手动拖入 Applications。"
+        alert.addButton(withTitle: "好")
+
+        NSApp.activate(ignoringOtherApps: true)
+        alert.runModal()
+    }
+
+    private func showError(_ error: Error) {
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = "检查更新失败"
+        alert.informativeText = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+        alert.addButton(withTitle: "好")
+
+        NSApp.activate(ignoringOtherApps: true)
+        alert.runModal()
+    }
+
+    private func releaseNotesView(text: String) -> NSView {
+        let scrollView = NSScrollView(frame: NSRect(x: 0, y: 0, width: 460, height: 220))
+        scrollView.borderType = .bezelBorder
+        scrollView.hasVerticalScroller = true
+
+        let textView = NSTextView(frame: scrollView.bounds)
+        textView.autoresizingMask = [.width]
+        textView.isEditable = false
+        textView.isSelectable = true
+        textView.drawsBackground = false
+        textView.textContainerInset = NSSize(width: 8, height: 8)
+        textView.font = NSFont.systemFont(ofSize: 12.5)
+        textView.string = text
+
+        scrollView.documentView = textView
+        return scrollView
+    }
+
+    private func startInstaller(dmgURL: URL) throws {
+        let appURL = Bundle.main.bundleURL
+        guard appURL.pathExtension == "app" else {
+            showManualInstall(dmgURL: dmgURL)
+            return
+        }
+
+        let scriptURL = try writeInstallerScript(dmgURL: dmgURL, appURL: appURL)
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/bin/bash")
+        process.arguments = [scriptURL.path]
+        try process.run()
+        NSApplication.shared.terminate(nil)
+    }
+
+    private func writeInstallerScript(dmgURL: URL, appURL: URL) throws -> URL {
+        let scriptURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ddq-cyber-thermometer-install-\(UUID().uuidString).sh")
+        let pid = ProcessInfo.processInfo.processIdentifier
+        let content = """
+        #!/bin/bash
+        set -euo pipefail
+
+        DMG=\(dmgURL.path.shellQuoted)
+        TARGET_APP=\(appURL.path.shellQuoted)
+        APP_NAME=\(appBundleName.shellQuoted)
+        APP_PID=\(pid)
+        LOG="${TMPDIR:-/tmp}/ddq-cyber-thermometer-update.log"
+        MOUNT_POINT=""
+        PLIST=""
+        TMP_APP=""
+
+        fail() {
+          /usr/bin/open "$DMG" >/dev/null 2>&1 || true
+          /usr/bin/osascript -e 'display dialog "动动枪赛博体温计自动安装失败，已打开 DMG。请手动把 App 拖到 Applications 替换旧版本。" buttons {"好"} default button 1 with icon caution' >/dev/null 2>&1 || true
+          exit 1
+        }
+
+        cleanup() {
+          if [ -n "$MOUNT_POINT" ]; then
+            /usr/bin/hdiutil detach "$MOUNT_POINT" -quiet >/dev/null 2>&1 || true
+          fi
+          if [ -n "$PLIST" ]; then
+            /bin/rm -f "$PLIST" >/dev/null 2>&1 || true
+          fi
+          if [ -n "$TMP_APP" ] && [ -d "$TMP_APP" ]; then
+            /bin/rm -rf "$TMP_APP" >/dev/null 2>&1 || true
+          fi
+        }
+        trap cleanup EXIT
+
+        exec >> "$LOG" 2>&1
+        echo "Starting DDQ Cyber Thermometer update at $(/bin/date)"
+
+        for _ in {1..80}; do
+          if ! /bin/ps -p "$APP_PID" >/dev/null 2>&1; then
+            break
+          fi
+          /bin/sleep 0.5
+        done
+
+        PLIST="$(/usr/bin/mktemp "${TMPDIR:-/tmp}/ddq-update-mount.XXXXXX.plist")"
+        /usr/bin/hdiutil attach "$DMG" -nobrowse -readonly -noverify -plist > "$PLIST" || fail
+
+        for index in 0 1 2 3 4; do
+          MOUNT_POINT="$(/usr/libexec/PlistBuddy -c "Print :system-entities:$index:mount-point" "$PLIST" 2>/dev/null || true)"
+          if [ -n "$MOUNT_POINT" ]; then
+            break
+          fi
+        done
+
+        if [ -z "$MOUNT_POINT" ]; then
+          fail
+        fi
+
+        SOURCE_APP="$MOUNT_POINT/$APP_NAME"
+        if [ ! -d "$SOURCE_APP" ]; then
+          SOURCE_APP="$(/usr/bin/find "$MOUNT_POINT" -maxdepth 1 -name "*.app" -type d | /usr/bin/head -n 1)"
+        fi
+        if [ -z "$SOURCE_APP" ] || [ ! -d "$SOURCE_APP" ]; then
+          fail
+        fi
+
+        TARGET_PARENT="$(/usr/bin/dirname "$TARGET_APP")"
+        TMP_APP="$TARGET_PARENT/.ddq-cyber-thermometer-update-$$.app"
+
+        /usr/bin/ditto "$SOURCE_APP" "$TMP_APP" || fail
+        /usr/bin/codesign --verify --deep --strict "$TMP_APP" >/dev/null 2>&1 || true
+
+        if [ -d "$TARGET_APP" ]; then
+          /bin/rm -rf "$TARGET_APP" || fail
+        fi
+        /bin/mv "$TMP_APP" "$TARGET_APP" || fail
+        TMP_APP=""
+
+        /usr/bin/xattr -dr com.apple.quarantine "$TARGET_APP" >/dev/null 2>&1 || true
+        /usr/bin/open "$TARGET_APP" >/dev/null 2>&1 || true
+        /bin/rm -f "$DMG" "$0" >/dev/null 2>&1 || true
+        echo "Update finished at $(/bin/date)"
+        """
+
+        try content.write(to: scriptURL, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: scriptURL.path)
+        return scriptURL
+    }
+
+    private func currentAppVersion() -> String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.0.0"
+    }
+
+    private func sha256Hex(for fileURL: URL) throws -> String {
+        let data = try Data(contentsOf: fileURL)
+        return SHA256.hash(data: data)
+            .map { String(format: "%02x", $0) }
+            .joined()
+    }
+
+    private func normalizedSHA256(_ text: String?) -> String? {
+        guard let text else { return nil }
+        let lowercased = text.lowercased()
+        if let range = lowercased.range(of: #"[a-f0-9]{64}"#, options: .regularExpression) {
+            return String(lowercased[range])
+        }
+        return nil
+    }
+}
+
+struct GitHubRelease: Decodable {
+    let tagName: String
+    let name: String?
+    let body: String?
+    let htmlURL: URL
+    let assets: [GitHubReleaseAsset]
+
+    enum CodingKeys: String, CodingKey {
+        case tagName = "tag_name"
+        case name
+        case body
+        case htmlURL = "html_url"
+        case assets
+    }
+
+    var versionText: String {
+        tagName.trimmingCharacters(in: CharacterSet(charactersIn: "vV"))
+    }
+
+    var bodyText: String {
+        let trimmedBody = body?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return trimmedBody.isEmpty ? "这个版本没有填写更新说明。" : trimmedBody
+    }
+
+    func preferredDMGAsset(prefix: String, version: String) -> GitHubReleaseAsset? {
+        let exactName = "\(prefix)-\(version).dmg"
+        if let exactAsset = assets.first(where: { $0.name == exactName }) {
+            return exactAsset
+        }
+
+        return assets.first { asset in
+            asset.name.hasSuffix(".dmg") && !asset.name.hasSuffix(".dmg.sha256")
+        }
+    }
+
+    func checksumAsset(for dmgAsset: GitHubReleaseAsset) -> GitHubReleaseAsset? {
+        assets.first { $0.name == "\(dmgAsset.name).sha256" }
+            ?? assets.first { $0.name.hasSuffix(".dmg.sha256") }
+    }
+}
+
+struct GitHubReleaseAsset: Decodable {
+    let name: String
+    let browserDownloadURL: URL
+    let digest: String?
+
+    enum CodingKeys: String, CodingKey {
+        case name
+        case browserDownloadURL = "browser_download_url"
+        case digest
+    }
+}
+
+struct ReleaseVersion: Comparable {
+    private let components: [Int]
+
+    init(_ text: String) {
+        let versionText = text.trimmingCharacters(in: CharacterSet(charactersIn: "vV"))
+        let numbers = versionText
+            .split { !$0.isNumber }
+            .compactMap { Int($0) }
+        self.components = numbers.isEmpty ? [0] : numbers
+    }
+
+    static func < (lhs: ReleaseVersion, rhs: ReleaseVersion) -> Bool {
+        let count = max(lhs.components.count, rhs.components.count)
+        for index in 0..<count {
+            let left = index < lhs.components.count ? lhs.components[index] : 0
+            let right = index < rhs.components.count ? rhs.components[index] : 0
+            if left != right {
+                return left < right
+            }
+        }
+        return false
+    }
+}
+
+enum UpdateError: LocalizedError {
+    case invalidReleaseURL
+    case httpStatus(Int)
+    case invalidChecksumFile
+    case checksumMismatch(expected: String, actual: String)
+
+    var errorDescription: String? {
+        switch self {
+        case .invalidReleaseURL:
+            return "更新地址无效。"
+        case .httpStatus(let statusCode):
+            return "GitHub 返回了 HTTP \(statusCode)。请稍后再试。"
+        case .invalidChecksumFile:
+            return "Release 里的 SHA256 校验文件格式无效，已停止安装。"
+        case .checksumMismatch(let expected, let actual):
+            return "下载的安装包校验失败。\n期望：\(expected)\n实际：\(actual)"
+        }
+    }
+}
+
+extension String {
+    var shellQuoted: String {
+        "'\(replacingOccurrences(of: "'", with: "'\\''"))'"
     }
 }
 
