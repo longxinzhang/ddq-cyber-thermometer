@@ -152,8 +152,6 @@ targets: [
 
 如果拆分初期不想一次调整 target，可以先在 `Sources/MacHealthGuardian/` 内按目录拆文件；但第一批单元测试落地前，应完成 `MacHealthGuardianCore` target。
 
-过渡期如果本机工具链缺少 `XCTest` 或 Swift `Testing` 模块，可以先增加 `MacHealthGuardianCoreTestRunner` executable target，用 `swift run MacHealthGuardianCoreTestRunner` 覆盖 Core 纯逻辑。该方式不替代最终的 `.testTarget`，只用于保证重构过程中有可运行的自动化验证。
-
 ## 依赖规则
 
 - `MacHealthGuardian` 可以依赖 `MacHealthGuardianCore`。
@@ -330,7 +328,6 @@ targets: [
 - 单个业务 Swift 文件原则上不超过工程规范评审门槛。
 - `swift build` 通过。
 - `swift test` 通过。
-- 如当前工具链缺少测试框架模块，则 `swift run MacHealthGuardianCoreTestRunner` 必须通过，并在测试报告中记录 `swift test` 的限制。
 - `MacHealthGuardian --help` 和 `MacHealthGuardian --sample` 可用。
 - App 启动后仍只显示在菜单栏。
 - 顶栏仍展示内存、CPU、核心温度。

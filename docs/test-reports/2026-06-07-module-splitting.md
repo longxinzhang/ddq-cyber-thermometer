@@ -14,18 +14,17 @@
 
 - 将 `Sources/MacHealthGuardian/main.swift` 拆分为 App、Rendering、Updates、LaunchAtLogin 模块文件。
 - 新增 `MacHealthGuardianCore` target，承载 Models、Monitoring、Sensors、Updates、Support 等核心逻辑。
-- 新增 `MacHealthGuardianCoreTestRunner` executable target，覆盖 Core 纯逻辑测试。
+- 新增 `MacHealthGuardianCoreTests` 标准 XCTest target，覆盖 Core 纯逻辑测试。
 - 合并官方 `v0.5.0`，将 AppleSMC 结构体偏移修复和 `flt` 浮点解码修复迁移到 `MacHealthGuardianCore/Sensors/AppleSMC/AppleSMCReader.swift`。
 - 新增并更新设计文档、测试规范和本测试报告。
 
 ## 测试结论
 
-结论：有条件通过
+结论：通过
 
 说明：
 
-- Debug 构建、Release 构建、Core 逻辑测试 runner、命令行帮助、命令行采样和 `.app` 构建均通过。
-- 当前本机工具链缺少 `XCTest` 和 Swift `Testing` 模块，因此标准 `.testTarget` / `swift test` 暂不可用；本次用 `MacHealthGuardianCoreTestRunner` 作为替代自动化测试。
+- Debug 构建、Release 构建、标准 `swift test`、命令行帮助、命令行采样和 `.app` 构建均通过。
 
 ## 自动化检查
 
@@ -33,8 +32,7 @@
 | --- | --- | --- | --- |
 | Debug 构建 | `swift build` | 通过 | 需非沙箱权限写入 SwiftPM/clang 缓存 |
 | Release 构建 | `swift build -c release` | 通过 | 生产构建通过 |
-| Core 逻辑测试 | `swift run MacHealthGuardianCoreTestRunner` | 通过 | 覆盖版本比较、资产选择、checksum 匹配、Atom 解析、`vm_stat` 解析、格式化 |
-| 标准 Swift 测试 | `swift test` | 未通过 | 当前无 `.testTarget`；此前尝试 `XCTest` 和 Swift `Testing` 均因工具链缺少模块失败 |
+| 标准 Swift 测试 | `swift test` | 通过 | 执行 9 个 XCTest，覆盖版本比较、资产选择、checksum 匹配、Atom 解析、`vm_stat` 解析、格式化 |
 | App Bundle 构建 | `Scripts/build-app.sh` | 通过 | 生成 `build/动动枪赛博体温计.app` |
 
 ## 命令行验证
@@ -57,7 +55,6 @@
 - 菜单栏 UI 未手动启动验证；本次只验证编译和命令行模式。
 - 更新安装脚本未执行真实 ZIP/DMG 替换安装，只验证编译。
 - AppleSMC、HID 温度和风扇读取受硬件环境影响，本次只通过 `--sample` 做运行验证；官方 v0.5.0 的 SMC 结构修复已迁移到 Core 模块。
-- 标准 `swift test` 尚未恢复，需要安装或切换到包含 `XCTest` / Swift `Testing` 的完整 Xcode/Swift 工具链后再迁移。
 
 ## 附件
 

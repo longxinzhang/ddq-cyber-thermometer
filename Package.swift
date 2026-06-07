@@ -15,10 +15,6 @@ let package = Package(
         .library(
             name: "MacHealthGuardianCore",
             targets: ["MacHealthGuardianCore"]
-        ),
-        .executable(
-            name: "MacHealthGuardianCoreTestRunner",
-            targets: ["MacHealthGuardianCoreTestRunner"]
         )
     ],
     targets: [
@@ -35,10 +31,9 @@ let package = Package(
                 .linkedFramework("IOKit")
             ]
         ),
-        .executableTarget(
-            name: "MacHealthGuardianCoreTestRunner",
-            dependencies: ["MacHealthGuardianCore"],
-            path: "Tests/MacHealthGuardianCoreTestRunner"
+        .testTarget(
+            name: "MacHealthGuardianCoreTests",
+            dependencies: ["MacHealthGuardianCore"]
         )
     ]
 )

@@ -28,12 +28,15 @@
 
 #### Swift 单元测试落地方式
 
-Swift Package 支持通过 `swift test` 执行单元测试。当前项目只有一个 executable target，且入口代码包含 `@main`、AppKit 菜单栏生命周期和系统 API。为了让测试稳定、边界清晰，新增单元测试时应优先采用“可测试核心库 + 可执行 App 入口”的结构：
+Swift Package 支持通过 `swift test` 执行单元测试。当前项目采用“可测试核心库 + 可执行 App 入口”的结构，单元测试依赖 `MacHealthGuardianCore`，不直接依赖菜单栏 App 入口：
 
 ```text
 Sources/
 ├── MacHealthGuardian/
-│   └── main.swift
+│   ├── App/
+│   ├── LaunchAtLogin/
+│   ├── Rendering/
+│   └── Updates/
 └── MacHealthGuardianCore/
     ├── Models/
     ├── Monitoring/
@@ -43,8 +46,10 @@ Sources/
 Tests/
 └── MacHealthGuardianCoreTests/
     ├── ReleaseVersionTests.swift
-    ├── GitHubReleaseAssetSelectionTests.swift
-    └── VMStatParsingTests.swift
+    ├── GitHubReleaseTests.swift
+    ├── ReleaseAtomParserTests.swift
+    ├── VMStatParserTests.swift
+    └── FormattingTests.swift
 ```
 
 推荐的 `Package.swift` target 关系：
@@ -55,15 +60,13 @@ targets: [
         name: "MacHealthGuardian",
         dependencies: ["MacHealthGuardianCore"],
         linkerSettings: [
-            .linkedFramework("IOKit"),
             .linkedFramework("ServiceManagement")
         ]
     ),
     .target(
         name: "MacHealthGuardianCore",
         linkerSettings: [
-            .linkedFramework("IOKit"),
-            .linkedFramework("ServiceManagement")
+            .linkedFramework("IOKit")
         ]
     ),
     .testTarget(
@@ -87,15 +90,7 @@ targets: [
 swift test
 ```
 
-当前仓库尚未配置 `Tests/` 目录和测试 target。第一次引入单元测试的 PR 应先完成核心逻辑抽取和测试 target 配置，再补充首批测试用例。
-
-如果当前本机工具链缺少 `XCTest` 或 Swift `Testing` 模块，可以临时使用可执行测试 runner 验证纯逻辑：
-
-```bash
-swift run MacHealthGuardianCoreTestRunner
-```
-
-该 runner 只能作为过渡方案。后续切换到完整 Xcode/Swift 测试工具链后，应优先恢复标准 `.testTarget` 和 `swift test`。
+当前仓库已配置 `MacHealthGuardianCoreTests`。新增可测试纯逻辑时，应优先补充 XCTest 用例并确保 `swift test` 通过。
 
 ### 集成与命令行验证
 

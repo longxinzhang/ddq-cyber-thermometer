@@ -49,7 +49,7 @@ DDQ's Cyber Thermometer，中文名“动动枪赛博体温计”，是一个 ma
 │       ├── Support/
 │       └── Updates/
 ├── Tests/
-│   └── MacHealthGuardianCoreTestRunner/
+│   └── MacHealthGuardianCoreTests/
 └── docs/
     ├── assets/
     │   ├── app-icon.png
@@ -77,7 +77,7 @@ Swift Package 配置。当前定义：
 
 - `MacHealthGuardian`：菜单栏 App 可执行产物，依赖 `MacHealthGuardianCore`，链接 `ServiceManagement`。
 - `MacHealthGuardianCore`：核心逻辑库，承载模型、监控、传感器、更新解析和支持工具，链接 `IOKit`。
-- `MacHealthGuardianCoreTestRunner`：过渡期测试 runner，用于当前工具链缺少 `XCTest` / Swift `Testing` 模块时验证核心逻辑。
+- `MacHealthGuardianCoreTests`：标准 XCTest 单元测试 target，覆盖核心纯逻辑。
 
 ### `Info.plist`
 
@@ -102,9 +102,9 @@ Core target，负责可复用、可测试的核心逻辑：
 - `Updates/`：Release Atom 解析、版本比较、资产选择、更新错误模型。
 - `Support/`：Shell 调用、字符串转义、时间/百分比/容量格式化。
 
-### `Tests/MacHealthGuardianCoreTestRunner/`
+### `Tests/MacHealthGuardianCoreTests/`
 
-过渡期测试 runner。当前本机工具链缺少 `XCTest` 和 Swift `Testing` 模块，因此暂用可执行测试 runner 覆盖核心纯逻辑。后续切换到完整测试工具链后，应迁移为标准 `.testTarget` 和 `swift test`。
+标准 XCTest 单元测试 target。当前覆盖版本比较、Release 资产选择、Release Atom 解析、`vm_stat` 解析和格式化逻辑。
 
 ### `Scripts/`
 
