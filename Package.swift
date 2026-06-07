@@ -37,7 +37,7 @@ let package = Package(
         ),
         .testTarget(
             name: "MacHealthGuardianTests",
-            dependencies: ["MacHealthGuardian"]
+            dependencies: ["MacHealthGuardian", "MacHealthGuardianCore"]
         )
     ]
 )

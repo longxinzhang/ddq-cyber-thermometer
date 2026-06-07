@@ -22,6 +22,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let versionItem = NSMenuItem(title: AppVersion.menuTitle, action: nil, keyEquivalent: "")
     private let launchAtLoginItem = NSMenuItem(title: "开机启动", action: nil, keyEquivalent: "")
     private let updateItem = NSMenuItem(title: "检查更新…", action: nil, keyEquivalent: "")
+    private let copyDiagnosticsItem = NSMenuItem(title: "复制诊断信息", action: nil, keyEquivalent: "")
     private var statusItem: NSStatusItem?
     private var latestSnapshot = SystemSnapshot.placeholder
 
@@ -92,6 +93,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         )
         refreshItem.target = self
         menu.addItem(refreshItem)
+
+        copyDiagnosticsItem.action = #selector(copyDiagnosticReport)
+        copyDiagnosticsItem.target = self
+        menu.addItem(copyDiagnosticsItem)
         menu.addItem(.separator())
 
         versionItem.isEnabled = false
@@ -134,6 +139,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     @objc private func refreshNow() {
         monitor.refresh()
+    }
+
+    @objc private func copyDiagnosticReport() {
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(
+            AppDiagnosticReport.text(snapshot: latestSnapshot),
+            forType: .string
+        )
     }
 
     @objc private func toggleDisplayMetric(_ sender: NSMenuItem) {
