@@ -10,8 +10,8 @@
 
 公开版本会放在 GitHub Release：
 
-- 下载最新版：`Releases` 页面里的 `DDQs-Cyber-Thermometer-0.5.0.dmg`
-- 当前版本：`v0.5.0`
+- 下载最新版：`Releases` 页面里的 `DDQs-Cyber-Thermometer-0.6.0.dmg`
+- 当前版本：`v0.6.0`
 - 许可证：MIT
 
 安装方式：打开 DMG，把 `动动枪赛博体温计.app` 拖到 `Applications`。
@@ -22,11 +22,10 @@
 
 ![顶栏小组件展示](docs/assets/widget-closeup.png)
 
-- 左侧蓝色迷你柱：内存占用率
-- 右侧绿色迷你柱：CPU 占用率
+- 顶栏迷你柱：内存压力、内存占用率、CPU 占用率
 - 紧贴的数字：核心温度
 - 鼠标悬停：显示完整的内存、CPU、核心温度
-- 点击菜单：显示风扇当前转速，支持开机启动、检查更新、刷新或退出
+- 点击菜单：显示风扇当前转速，支持调整顶栏显示项、开机启动、检查更新、复制诊断信息、刷新或退出
 
 ## 介绍页面
 
@@ -59,10 +58,10 @@ Scripts/package-dmg.sh
 生成：
 
 ```text
-dist/DDQs-Cyber-Thermometer-0.5.0.dmg
-dist/DDQs-Cyber-Thermometer-0.5.0.dmg.sha256
-dist/DDQs-Cyber-Thermometer-0.5.0.app.zip
-dist/DDQs-Cyber-Thermometer-0.5.0.app.zip.sha256
+dist/DDQs-Cyber-Thermometer-0.6.0.dmg
+dist/DDQs-Cyber-Thermometer-0.6.0.dmg.sha256
+dist/DDQs-Cyber-Thermometer-0.6.0.app.zip
+dist/DDQs-Cyber-Thermometer-0.6.0.app.zip.sha256
 ```
 
 只构建 App：

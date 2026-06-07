@@ -1,14 +1,19 @@
-# DDQ's Cyber Thermometer v0.5.0
+# DDQ's Cyber Thermometer v0.6.0
 
 中文名：动动枪赛博体温计
 
-本版本修复 macOS 26.4 / Apple Silicon M5 机型上风扇转速显示为“未读取”的问题。
+本版本合并 PR #1，完成源码模块化，并加入内存压力显示、诊断信息复制和测试/设计文档。
 
 ## 功能
 
-- 顶栏融合小组件：左侧双柱显示内存和 CPU，右侧显示核心温度。
+- 顶栏融合小组件：迷你柱显示内存压力、内存和 CPU，右侧显示核心温度。
 - 鼠标悬停显示完整数值。
-- 点击菜单显示风扇当前转速；顶栏仍只保留内存、CPU 和核心温度。
+- 点击菜单显示风扇当前转速、内存压力、可用内存、压缩内存和交换空间。
+- 点击菜单可调整顶栏显示项。
+- 点击菜单可复制诊断信息，便于反馈系统状态和传感器读数。
+- 将 App、渲染、更新、登录项、采样和传感器逻辑拆分成独立模块。
+- 新增 XCTest 覆盖格式化、版本比较、Release 解析、内存压力和 VM stat 解析等核心逻辑。
+- 新增工程设计文档、测试指南和测试报告模板。
 - 修复 AppleSMC 读取结构体偏移，支持在 M5 / macOS 26.4 上读取 `FNum`、`F0Ac`、`F1Ac` 等风扇键。
 - 修复 Apple Silicon 风扇 RPM 的 `flt` 原生浮点解码。
 - 点击菜单可勾选“开机启动”。
@@ -23,8 +28,8 @@
 
 ## 安装
 
-下载 `DDQs-Cyber-Thermometer-0.5.0.dmg`，打开后把 `动动枪赛博体温计.app` 拖到 Applications。
+下载 `DDQs-Cyber-Thermometer-0.6.0.dmg`，打开后把 `动动枪赛博体温计.app` 拖到 Applications。
 
-Release 同时提供 `DDQs-Cyber-Thermometer-0.5.0.app.zip`，供 App 内在线升级优先使用。
+Release 同时提供 `DDQs-Cyber-Thermometer-0.6.0.app.zip`，供 App 内在线升级优先使用。
 
 当前安装包为本地临时签名，未做 Apple Developer ID 公证。首次打开时如遇到系统拦截，可右键 App 选择“打开”，或在“系统设置 > 隐私与安全性”中允许打开。
