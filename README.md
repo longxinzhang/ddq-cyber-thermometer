@@ -10,8 +10,8 @@
 
 公开版本会放在 GitHub Release：
 
-- 下载最新版：`Releases` 页面里的 `DDQs-Cyber-Thermometer-0.3.0.dmg`
-- 当前版本：`v0.3.0`
+- 下载最新版：`Releases` 页面里的 `DDQs-Cyber-Thermometer-0.4.0.dmg`
+- 当前版本：`v0.4.0`
 - 许可证：MIT
 
 安装方式：打开 DMG，把 `动动枪赛博体温计.app` 拖到 `Applications`。
@@ -26,7 +26,7 @@
 - 右侧绿色迷你柱：CPU 占用率
 - 紧贴的数字：核心温度
 - 鼠标悬停：显示完整的内存、CPU、核心温度
-- 点击菜单：显示风扇当前转速，支持检查更新、刷新或退出
+- 点击菜单：显示风扇当前转速，支持开机启动、检查更新、刷新或退出
 
 ## 介绍页面
 
@@ -49,8 +49,10 @@ Scripts/package-dmg.sh
 生成：
 
 ```text
-dist/DDQs-Cyber-Thermometer-0.3.0.dmg
-dist/DDQs-Cyber-Thermometer-0.3.0.dmg.sha256
+dist/DDQs-Cyber-Thermometer-0.4.0.dmg
+dist/DDQs-Cyber-Thermometer-0.4.0.dmg.sha256
+dist/DDQs-Cyber-Thermometer-0.4.0.app.zip
+dist/DDQs-Cyber-Thermometer-0.4.0.app.zip.sha256
 ```
 
 只构建 App：
@@ -84,9 +86,15 @@ v0.2.1 起，点击顶栏图标后菜单会显示风扇当前转速。工具会�
 
 ## 在线升级
 
-v0.3.0 起，点击顶栏图标后可以选择“检查更新…”。工具会读取 GitHub 最新 Release，比对当前版本，显示更新内容；用户确认后会下载 DMG、校验 SHA256，并在退出当前 App 后自动替换安装。
+v0.3.0 起，点击顶栏图标后可以选择“检查更新…”。工具会读取 GitHub 最新 Release，比对当前版本，显示更新内容。
 
-如果自动安装因为权限或运行位置失败，工具会打开下载好的 DMG，用户仍可手动拖入 Applications。
+v0.4.0 起，App 内更新会优先下载 `.app.zip`，校验 SHA256，并在退出当前 App 后自动替换安装、重新打开；如果 Release 没有 zip 更新包，会回退到 DMG 更新流程。
+
+如果自动安装因为权限或运行位置失败，工具会打开下载好的更新包，用户仍可手动安装。
+
+## 开机启动
+
+v0.4.0 起，点击顶栏图标后可以勾选“开机启动”。这个设置使用 macOS 登录项能力，不需要额外后台进程。
 
 ## 发布到 GitHub
 

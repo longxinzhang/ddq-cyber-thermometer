@@ -8,6 +8,7 @@ VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$INFO
 DIST_DIR="$ROOT_DIR/dist"
 STAGE_DIR="$ROOT_DIR/build/dmg-root"
 DMG_PATH="$DIST_DIR/DDQs-Cyber-Thermometer-$VERSION.dmg"
+ZIP_PATH="$DIST_DIR/DDQs-Cyber-Thermometer-$VERSION.app.zip"
 
 mkdir -p "$DIST_DIR"
 
@@ -17,7 +18,7 @@ if [ ! -d "$APP_PATH" ]; then
   exit 1
 fi
 
-rm -rf "$STAGE_DIR" "$DMG_PATH" "$DMG_PATH.sha256"
+rm -rf "$STAGE_DIR" "$DMG_PATH" "$DMG_PATH.sha256" "$ZIP_PATH" "$ZIP_PATH.sha256"
 mkdir -p "$STAGE_DIR"
 
 cp -R "$APP_PATH" "$STAGE_DIR/$PRODUCT_NAME.app"
@@ -32,7 +33,8 @@ DDQ's Cyber Thermometer
 2. 打开后它会出现在 macOS 顶栏，不会显示 Dock 图标。
 3. 顶栏左侧双柱表示内存和 CPU，右侧数字是核心温度。
 4. 鼠标移到顶栏小组件上可查看完整数值。
-5. 点击菜单可查看风扇转速、检查更新、刷新或退出。
+5. 点击菜单可勾选开机启动，查看风扇转速、检查更新、刷新或退出。
+6. v0.4.0 起，App 内检查更新会优先使用 .app.zip 自动替换安装。
 
 如果 macOS 提示无法验证开发者：
 这是未使用 Apple Developer ID 公证的个人分发包。可在“系统设置 > 隐私与安全性”里允许打开，或右键 App 选择“打开”。
@@ -47,5 +49,13 @@ hdiutil create \
 
 shasum -a 256 "$DMG_PATH" > "$DMG_PATH.sha256"
 
+(
+  cd "$(dirname "$APP_PATH")"
+  /usr/bin/ditto -c -k --sequesterRsrc --keepParent "$(basename "$APP_PATH")" "$ZIP_PATH"
+)
+shasum -a 256 "$ZIP_PATH" > "$ZIP_PATH.sha256"
+
 echo "$DMG_PATH"
 echo "$DMG_PATH.sha256"
+echo "$ZIP_PATH"
+echo "$ZIP_PATH.sha256"

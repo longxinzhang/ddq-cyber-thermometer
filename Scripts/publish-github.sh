@@ -3,10 +3,12 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 REPO_NAME="${GITHUB_REPO_NAME:-ddq-cyber-thermometer}"
-TAG="v0.3.0"
-TITLE="DDQ's Cyber Thermometer v0.3.0"
-DMG="$ROOT_DIR/dist/DDQs-Cyber-Thermometer-0.3.0.dmg"
-SHA="$DMG.sha256"
+TAG="v0.4.0"
+TITLE="DDQ's Cyber Thermometer v0.4.0"
+DMG="$ROOT_DIR/dist/DDQs-Cyber-Thermometer-0.4.0.dmg"
+DMG_SHA="$DMG.sha256"
+ZIP="$ROOT_DIR/dist/DDQs-Cyber-Thermometer-0.4.0.app.zip"
+ZIP_SHA="$ZIP.sha256"
 
 cd "$ROOT_DIR"
 
@@ -15,7 +17,7 @@ if ! gh auth status >/dev/null 2>&1; then
   exit 1
 fi
 
-if [ ! -f "$DMG" ] || [ ! -f "$SHA" ]; then
+if [ ! -f "$DMG" ] || [ ! -f "$DMG_SHA" ] || [ ! -f "$ZIP" ] || [ ! -f "$ZIP_SHA" ]; then
   "$ROOT_DIR/Scripts/package-dmg.sh" >/dev/null
 fi
 
@@ -55,9 +57,9 @@ git push origin "$TAG" --force
 
 if gh release view "$TAG" >/dev/null 2>&1; then
   gh release edit "$TAG" --title "$TITLE" --notes-file RELEASE_NOTES.md
-  gh release upload "$TAG" "$DMG" "$SHA" --clobber
+  gh release upload "$TAG" "$DMG" "$DMG_SHA" "$ZIP" "$ZIP_SHA" --clobber
 else
-  gh release create "$TAG" "$DMG" "$SHA" --title "$TITLE" --notes-file RELEASE_NOTES.md
+  gh release create "$TAG" "$DMG" "$DMG_SHA" "$ZIP" "$ZIP_SHA" --title "$TITLE" --notes-file RELEASE_NOTES.md
 fi
 
 REPO_FULL="$(gh repo view --json nameWithOwner -q .nameWithOwner)"

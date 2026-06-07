@@ -17,7 +17,8 @@ let package = Package(
         .executableTarget(
             name: "MacHealthGuardian",
             linkerSettings: [
-                .linkedFramework("IOKit")
+                .linkedFramework("IOKit"),
+                .linkedFramework("ServiceManagement")
             ]
         )
     ]

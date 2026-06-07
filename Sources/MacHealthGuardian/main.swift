@@ -3,6 +3,7 @@ import CryptoKit
 import Darwin
 import Foundation
 import IOKit
+import ServiceManagement
 import SwiftUI
 
 @main
@@ -40,16 +41,18 @@ struct MacHealthGuardianApp: App {
 }
 
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let monitor = SystemMonitor()
     private let renderer = StatusImageRenderer()
     private let updateController = UpdateController()
+    private let launchAtLoginController = LaunchAtLoginController()
     private let menu = NSMenu()
     private let memoryItem = NSMenuItem(title: "内存 --", action: nil, keyEquivalent: "")
     private let cpuItem = NSMenuItem(title: "CPU --", action: nil, keyEquivalent: "")
     private let temperatureItem = NSMenuItem(title: "核心温度 --", action: nil, keyEquivalent: "")
     private let fanItem = NSMenuItem(title: "风扇转速 --", action: nil, keyEquivalent: "")
     private let updatedItem = NSMenuItem(title: "等待刷新", action: nil, keyEquivalent: "")
+    private let launchAtLoginItem = NSMenuItem(title: "开机启动", action: nil, keyEquivalent: "")
     private let updateItem = NSMenuItem(title: "检查更新…", action: nil, keyEquivalent: "")
     private var statusItem: NSStatusItem?
 
@@ -80,6 +83,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func configureMenu() {
+        menu.delegate = self
+
         [memoryItem, cpuItem, temperatureItem, fanItem, updatedItem].forEach { item in
             item.isEnabled = false
         }
@@ -90,6 +95,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(fanItem)
         menu.addItem(updatedItem)
         menu.addItem(.separator())
+
+        launchAtLoginItem.action = #selector(toggleLaunchAtLogin)
+        launchAtLoginItem.target = self
+        menu.addItem(launchAtLoginItem)
 
         updateItem.action = #selector(checkForUpdates)
         updateItem.target = self
@@ -112,6 +121,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(quitItem)
     }
 
+    func menuWillOpen(_ menu: NSMenu) {
+        updateLaunchAtLoginMenuItem()
+    }
+
     private func render(_ snapshot: SystemSnapshot) {
         guard let button = statusItem?.button else { return }
 
@@ -131,12 +144,61 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         monitor.refresh()
     }
 
+    @objc private func toggleLaunchAtLogin() {
+        do {
+            try launchAtLoginController.setEnabled(!launchAtLoginController.isEnabled)
+            updateLaunchAtLoginMenuItem()
+        } catch {
+            updateLaunchAtLoginMenuItem()
+            showLaunchAtLoginError(error)
+        }
+    }
+
     @objc private func checkForUpdates() {
         updateController.checkForUpdates(menuItem: updateItem)
     }
 
     @objc private func quit() {
         NSApplication.shared.terminate(nil)
+    }
+
+    private func updateLaunchAtLoginMenuItem() {
+        launchAtLoginItem.state = launchAtLoginController.isEnabled ? .on : .off
+        launchAtLoginItem.isEnabled = launchAtLoginController.canToggle
+    }
+
+    private func showLaunchAtLoginError(_ error: Error) {
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = "开机启动设置失败"
+        alert.informativeText = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+        alert.addButton(withTitle: "好")
+
+        NSApp.activate(ignoringOtherApps: true)
+        alert.runModal()
+    }
+}
+
+final class LaunchAtLoginController {
+    var isEnabled: Bool {
+        SMAppService.mainApp.status == .enabled
+    }
+
+    var canToggle: Bool {
+        let status = SMAppService.mainApp.status
+        return status == .enabled || status == .notRegistered
+    }
+
+    func setEnabled(_ enabled: Bool) throws {
+        if enabled {
+            if SMAppService.mainApp.status != .enabled {
+                try SMAppService.mainApp.register()
+            }
+        } else {
+            if SMAppService.mainApp.status == .enabled {
+                try SMAppService.mainApp.unregister()
+            }
+        }
     }
 }
 
@@ -181,7 +243,7 @@ final class UpdateController {
             return
         }
 
-        guard let dmgAsset = release.preferredDMGAsset(prefix: assetPrefix, version: latestVersion) else {
+        guard let installAsset = release.preferredInstallAsset(prefix: assetPrefix, version: latestVersion) else {
             showMissingInstaller(release: release, version: latestVersion)
             return
         }
@@ -191,10 +253,10 @@ final class UpdateController {
         }
 
         menuItem.title = "正在下载更新…"
-        let downloadedDMG = try await downloadAndVerify(asset: dmgAsset, release: release)
+        let downloadedPackage = try await downloadAndVerify(asset: installAsset.asset, release: release)
 
         menuItem.title = "正在准备安装…"
-        try startInstaller(dmgURL: downloadedDMG)
+        try startInstaller(package: installAsset, downloadedURL: downloadedPackage)
     }
 
     private func fetchLatestRelease() async throws -> GitHubRelease {
@@ -268,7 +330,7 @@ final class UpdateController {
         let alert = NSAlert()
         alert.alertStyle = .informational
         alert.messageText = "发现新版本 v\(latestVersion)"
-        alert.informativeText = "当前版本 v\(currentVersion)。下载后会自动校验安装包，退出当前 App，替换为新版后重新打开。"
+        alert.informativeText = "当前版本 v\(currentVersion)。下载后会自动校验更新包，退出当前 App，替换为新版后重新打开。"
         alert.addButton(withTitle: "下载并安装")
         alert.addButton(withTitle: "稍后")
         alert.addButton(withTitle: "打开 Release")
@@ -297,8 +359,8 @@ final class UpdateController {
     private func showMissingInstaller(release: GitHubRelease, version: String) {
         let alert = NSAlert()
         alert.alertStyle = .warning
-        alert.messageText = "没有找到可安装的 DMG"
-        alert.informativeText = "GitHub 最新版本是 v\(version)，但 Release 里没有找到 \(assetPrefix)-\(version).dmg。"
+        alert.messageText = "没有找到可安装的更新包"
+        alert.informativeText = "GitHub 最新版本是 v\(version)，但 Release 里没有找到 \(assetPrefix)-\(version).app.zip 或 \(assetPrefix)-\(version).dmg。"
         alert.addButton(withTitle: "打开 Release")
         alert.addButton(withTitle: "好")
 
@@ -308,13 +370,13 @@ final class UpdateController {
         }
     }
 
-    private func showManualInstall(dmgURL: URL) {
-        NSWorkspace.shared.open(dmgURL)
+    private func showManualInstall(packageURL: URL) {
+        NSWorkspace.shared.open(packageURL)
 
         let alert = NSAlert()
         alert.alertStyle = .warning
         alert.messageText = "需要手动安装"
-        alert.informativeText = "当前运行的不是 .app 包，无法自动替换。已打开下载好的 DMG，请手动拖入 Applications。"
+        alert.informativeText = "当前运行的不是 .app 包，无法自动替换。已打开下载好的更新包，请手动安装。"
         alert.addButton(withTitle: "好")
 
         NSApp.activate(ignoringOtherApps: true)
@@ -350,14 +412,14 @@ final class UpdateController {
         return scrollView
     }
 
-    private func startInstaller(dmgURL: URL) throws {
+    private func startInstaller(package: UpdateInstallAsset, downloadedURL: URL) throws {
         let appURL = Bundle.main.bundleURL
         guard appURL.pathExtension == "app" else {
-            showManualInstall(dmgURL: dmgURL)
+            showManualInstall(packageURL: downloadedURL)
             return
         }
 
-        let scriptURL = try writeInstallerScript(dmgURL: dmgURL, appURL: appURL)
+        let scriptURL = try writeInstallerScript(package: package, downloadedURL: downloadedURL, appURL: appURL)
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/bash")
         process.arguments = [scriptURL.path]
@@ -365,36 +427,90 @@ final class UpdateController {
         NSApplication.shared.terminate(nil)
     }
 
-    private func writeInstallerScript(dmgURL: URL, appURL: URL) throws -> URL {
+    private func writeInstallerScript(package: UpdateInstallAsset, downloadedURL: URL, appURL: URL) throws -> URL {
         let scriptURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("ddq-cyber-thermometer-install-\(UUID().uuidString).sh")
         let pid = ProcessInfo.processInfo.processIdentifier
+        let sourcePreparationScript: String
+        let cleanupScript: String
+        let manualFallbackScript: String
+
+        switch package.kind {
+        case .appZip:
+            sourcePreparationScript = """
+            EXTRACT_DIR="$(/usr/bin/mktemp -d "${TMPDIR:-/tmp}/ddq-update-extract.XXXXXX")"
+            /usr/bin/ditto -x -k "$PACKAGE" "$EXTRACT_DIR" || fail
+            SOURCE_APP="$EXTRACT_DIR/$APP_NAME"
+            if [ ! -d "$SOURCE_APP" ]; then
+              SOURCE_APP="$(/usr/bin/find "$EXTRACT_DIR" -maxdepth 2 -name "*.app" -type d | /usr/bin/head -n 1)"
+            fi
+            """
+            cleanupScript = """
+              if [ -n "$EXTRACT_DIR" ] && [ -d "$EXTRACT_DIR" ]; then
+                /bin/rm -rf "$EXTRACT_DIR" >/dev/null 2>&1 || true
+              fi
+            """
+            manualFallbackScript = """
+              /usr/bin/open "$PACKAGE" >/dev/null 2>&1 || true
+              /usr/bin/osascript -e 'display dialog "动动枪赛博体温计自动安装失败，已打开 ZIP。请解压后手动把 App 拖到 Applications 替换旧版本。" buttons {"好"} default button 1 with icon caution' >/dev/null 2>&1 || true
+            """
+        case .dmg:
+            sourcePreparationScript = """
+            PLIST="$(/usr/bin/mktemp "${TMPDIR:-/tmp}/ddq-update-mount.XXXXXX.plist")"
+            /usr/bin/hdiutil attach "$PACKAGE" -nobrowse -readonly -noverify -plist > "$PLIST" || fail
+
+            for index in 0 1 2 3 4; do
+              MOUNT_POINT="$(/usr/libexec/PlistBuddy -c "Print :system-entities:$index:mount-point" "$PLIST" 2>/dev/null || true)"
+              if [ -n "$MOUNT_POINT" ]; then
+                break
+              fi
+            done
+
+            if [ -z "$MOUNT_POINT" ]; then
+              fail
+            fi
+
+            SOURCE_APP="$MOUNT_POINT/$APP_NAME"
+            if [ ! -d "$SOURCE_APP" ]; then
+              SOURCE_APP="$(/usr/bin/find "$MOUNT_POINT" -maxdepth 1 -name "*.app" -type d | /usr/bin/head -n 1)"
+            fi
+            """
+            cleanupScript = """
+              if [ -n "$MOUNT_POINT" ]; then
+                /usr/bin/hdiutil detach "$MOUNT_POINT" -quiet >/dev/null 2>&1 || true
+              fi
+              if [ -n "$PLIST" ]; then
+                /bin/rm -f "$PLIST" >/dev/null 2>&1 || true
+              fi
+            """
+            manualFallbackScript = """
+              /usr/bin/open "$PACKAGE" >/dev/null 2>&1 || true
+              /usr/bin/osascript -e 'display dialog "动动枪赛博体温计自动安装失败，已打开 DMG。请手动把 App 拖到 Applications 替换旧版本。" buttons {"好"} default button 1 with icon caution' >/dev/null 2>&1 || true
+            """
+        }
+
         let content = """
         #!/bin/bash
         set -euo pipefail
 
-        DMG=\(dmgURL.path.shellQuoted)
+        PACKAGE=\(downloadedURL.path.shellQuoted)
         TARGET_APP=\(appURL.path.shellQuoted)
         APP_NAME=\(appBundleName.shellQuoted)
         APP_PID=\(pid)
         LOG="${TMPDIR:-/tmp}/ddq-cyber-thermometer-update.log"
         MOUNT_POINT=""
         PLIST=""
+        EXTRACT_DIR=""
         TMP_APP=""
+        SOURCE_APP=""
 
         fail() {
-          /usr/bin/open "$DMG" >/dev/null 2>&1 || true
-          /usr/bin/osascript -e 'display dialog "动动枪赛博体温计自动安装失败，已打开 DMG。请手动把 App 拖到 Applications 替换旧版本。" buttons {"好"} default button 1 with icon caution' >/dev/null 2>&1 || true
+        \(manualFallbackScript)
           exit 1
         }
 
         cleanup() {
-          if [ -n "$MOUNT_POINT" ]; then
-            /usr/bin/hdiutil detach "$MOUNT_POINT" -quiet >/dev/null 2>&1 || true
-          fi
-          if [ -n "$PLIST" ]; then
-            /bin/rm -f "$PLIST" >/dev/null 2>&1 || true
-          fi
+        \(cleanupScript)
           if [ -n "$TMP_APP" ] && [ -d "$TMP_APP" ]; then
             /bin/rm -rf "$TMP_APP" >/dev/null 2>&1 || true
           fi
@@ -411,24 +527,7 @@ final class UpdateController {
           /bin/sleep 0.5
         done
 
-        PLIST="$(/usr/bin/mktemp "${TMPDIR:-/tmp}/ddq-update-mount.XXXXXX.plist")"
-        /usr/bin/hdiutil attach "$DMG" -nobrowse -readonly -noverify -plist > "$PLIST" || fail
-
-        for index in 0 1 2 3 4; do
-          MOUNT_POINT="$(/usr/libexec/PlistBuddy -c "Print :system-entities:$index:mount-point" "$PLIST" 2>/dev/null || true)"
-          if [ -n "$MOUNT_POINT" ]; then
-            break
-          fi
-        done
-
-        if [ -z "$MOUNT_POINT" ]; then
-          fail
-        fi
-
-        SOURCE_APP="$MOUNT_POINT/$APP_NAME"
-        if [ ! -d "$SOURCE_APP" ]; then
-          SOURCE_APP="$(/usr/bin/find "$MOUNT_POINT" -maxdepth 1 -name "*.app" -type d | /usr/bin/head -n 1)"
-        fi
+        \(sourcePreparationScript)
         if [ -z "$SOURCE_APP" ] || [ ! -d "$SOURCE_APP" ]; then
           fail
         fi
@@ -447,7 +546,7 @@ final class UpdateController {
 
         /usr/bin/xattr -dr com.apple.quarantine "$TARGET_APP" >/dev/null 2>&1 || true
         /usr/bin/open "$TARGET_APP" >/dev/null 2>&1 || true
-        /bin/rm -f "$DMG" "$0" >/dev/null 2>&1 || true
+        /bin/rm -f "$PACKAGE" "$0" >/dev/null 2>&1 || true
         echo "Update finished at $(/bin/date)"
         """
 
@@ -477,6 +576,16 @@ final class UpdateController {
     }
 }
 
+struct UpdateInstallAsset {
+    let kind: UpdatePackageKind
+    let asset: GitHubReleaseAsset
+}
+
+enum UpdatePackageKind {
+    case appZip
+    case dmg
+}
+
 struct GitHubRelease: Decodable {
     let tagName: String
     let name: String?
@@ -501,20 +610,43 @@ struct GitHubRelease: Decodable {
         return trimmedBody.isEmpty ? "这个版本没有填写更新说明。" : trimmedBody
     }
 
-    func preferredDMGAsset(prefix: String, version: String) -> GitHubReleaseAsset? {
+    func preferredInstallAsset(prefix: String, version: String) -> UpdateInstallAsset? {
+        if let zipAsset = preferredAppZipAsset(prefix: prefix, version: version) {
+            return UpdateInstallAsset(kind: .appZip, asset: zipAsset)
+        }
+
+        if let dmgAsset = preferredDMGAsset(prefix: prefix, version: version) {
+            return UpdateInstallAsset(kind: .dmg, asset: dmgAsset)
+        }
+
+        return nil
+    }
+
+    private func preferredAppZipAsset(prefix: String, version: String) -> GitHubReleaseAsset? {
+        let exactName = "\(prefix)-\(version).app.zip"
+        if let exactAsset = assets.first(where: { $0.name == exactName }) {
+            return exactAsset
+        }
+
+        return assets.first { asset in
+            asset.name.hasSuffix(".app.zip") && !asset.name.hasSuffix(".sha256")
+        }
+    }
+
+    private func preferredDMGAsset(prefix: String, version: String) -> GitHubReleaseAsset? {
         let exactName = "\(prefix)-\(version).dmg"
         if let exactAsset = assets.first(where: { $0.name == exactName }) {
             return exactAsset
         }
 
         return assets.first { asset in
-            asset.name.hasSuffix(".dmg") && !asset.name.hasSuffix(".dmg.sha256")
+            asset.name.hasSuffix(".dmg") && !asset.name.hasSuffix(".sha256")
         }
     }
 
-    func checksumAsset(for dmgAsset: GitHubReleaseAsset) -> GitHubReleaseAsset? {
-        assets.first { $0.name == "\(dmgAsset.name).sha256" }
-            ?? assets.first { $0.name.hasSuffix(".dmg.sha256") }
+    func checksumAsset(for installAsset: GitHubReleaseAsset) -> GitHubReleaseAsset? {
+        assets.first { $0.name == "\(installAsset.name).sha256" }
+            ?? assets.first { $0.name.hasSuffix(".sha256") && $0.name.hasPrefix(installAsset.name) }
     }
 }
 
