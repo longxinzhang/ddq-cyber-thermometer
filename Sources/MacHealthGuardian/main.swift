@@ -243,7 +243,8 @@ final class UpdateController {
             return
         }
 
-        guard let installAsset = release.preferredInstallAsset(prefix: assetPrefix, version: latestVersion) else {
+        let installAssets = release.preferredInstallAssets(prefix: assetPrefix, version: latestVersion)
+        guard !installAssets.isEmpty else {
             showMissingInstaller(release: release, version: latestVersion)
             return
         }
@@ -252,27 +253,140 @@ final class UpdateController {
             return
         }
 
-        menuItem.title = "正在下载更新…"
-        let downloadedPackage = try await downloadAndVerify(asset: installAsset.asset, release: release)
+        var fallbackError: Error?
+        for installAsset in installAssets {
+            do {
+                menuItem.title = "正在下载更新…"
+                let downloadedPackage = try await downloadAndVerify(asset: installAsset.asset, release: release)
 
-        menuItem.title = "正在准备安装…"
-        try startInstaller(package: installAsset, downloadedURL: downloadedPackage)
+                menuItem.title = "正在准备安装…"
+                try startInstaller(package: installAsset, downloadedURL: downloadedPackage)
+                return
+            } catch UpdateError.httpStatus(let statusCode) where statusCode == 404 {
+                fallbackError = UpdateError.httpStatus(statusCode)
+                continue
+            }
+        }
+
+        if let fallbackError {
+            throw fallbackError
+        }
     }
 
     private func fetchLatestRelease() async throws -> GitHubRelease {
-        guard let url = URL(string: "https://api.github.com/repos/\(owner)/\(repository)/releases/latest") else {
+        guard let url = URL(string: "https://github.com/\(owner)/\(repository)/releases.atom") else {
             throw UpdateError.invalidReleaseURL
         }
 
         var request = URLRequest(url: url)
-        request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
+        request.setValue("application/atom+xml", forHTTPHeaderField: "Accept")
         request.setValue("DDQ-Cyber-Thermometer/\(currentAppVersion())", forHTTPHeaderField: "User-Agent")
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            try validate(response: response)
+
+            if let entry = ReleaseAtomParser.parseFirstEntry(from: data),
+               let htmlURL = entry.htmlURL,
+               let tagName = tagName(fromReleaseURL: htmlURL) {
+                return GitHubRelease(
+                    tagName: tagName,
+                    name: entry.title,
+                    body: plainText(fromReleaseHTML: entry.contentHTML),
+                    htmlURL: htmlURL,
+                    assets: releaseAssets(tagName: tagName)
+                )
+            }
+        } catch {
+            return try await fetchLatestReleaseFromRedirect()
+        }
+
+        return try await fetchLatestReleaseFromRedirect()
+    }
+
+    private func fetchLatestReleaseFromRedirect() async throws -> GitHubRelease {
+        guard let url = URL(string: "https://github.com/\(owner)/\(repository)/releases/latest") else {
+            throw UpdateError.invalidReleaseURL
+        }
+
+        var request = URLRequest(url: url)
+        request.setValue("DDQ-Cyber-Thermometer/\(currentAppVersion())", forHTTPHeaderField: "User-Agent")
+
+        let (_, response) = try await URLSession.shared.data(for: request)
         try validate(response: response)
 
-        let decoder = JSONDecoder()
-        return try decoder.decode(GitHubRelease.self, from: data)
+        guard let finalURL = response.url,
+              let tagName = tagName(fromReleaseURL: finalURL)
+        else {
+            throw UpdateError.invalidReleaseFeed
+        }
+
+        return GitHubRelease(
+            tagName: tagName,
+            name: "DDQ's Cyber Thermometer \(tagName)",
+            body: nil,
+            htmlURL: finalURL,
+            assets: releaseAssets(tagName: tagName)
+        )
+    }
+
+    private func releaseAssets(tagName: String) -> [GitHubReleaseAsset] {
+        let version = tagName.trimmingCharacters(in: CharacterSet(charactersIn: "vV"))
+        let names = [
+            "\(assetPrefix)-\(version).app.zip",
+            "\(assetPrefix)-\(version).app.zip.sha256",
+            "\(assetPrefix)-\(version).dmg",
+            "\(assetPrefix)-\(version).dmg.sha256"
+        ]
+
+        return names.compactMap { name in
+            guard let url = URL(string: "https://github.com/\(owner)/\(repository)/releases/download/\(tagName)/\(name)") else {
+                return nil
+            }
+            return GitHubReleaseAsset(name: name, browserDownloadURL: url, digest: nil)
+        }
+    }
+
+    private func tagName(fromReleaseURL url: URL) -> String? {
+        guard let tagIndex = url.pathComponents.lastIndex(of: "tag"),
+              tagIndex + 1 < url.pathComponents.count
+        else {
+            return nil
+        }
+
+        return url.pathComponents[tagIndex + 1]
+    }
+
+    private func plainText(fromReleaseHTML html: String) -> String {
+        var text = html
+        let replacements = [
+            (#"(?i)<br\s*/?>"#, "\n"),
+            (#"(?i)</p>"#, "\n\n"),
+            (#"(?i)<li>"#, "- "),
+            (#"(?i)</li>"#, "\n"),
+            (#"(?i)</h[1-6]>"#, "\n\n"),
+            (#"(?s)<[^>]+>"#, "")
+        ]
+
+        for (pattern, replacement) in replacements {
+            text = text.replacingOccurrences(of: pattern, with: replacement, options: .regularExpression)
+        }
+
+        text = htmlUnescape(text)
+        text = text
+            .replacingOccurrences(of: #"[ \t]+\n"#, with: "\n", options: .regularExpression)
+            .replacingOccurrences(of: #"\n{3,}"#, with: "\n\n", options: .regularExpression)
+        return text.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func htmlUnescape(_ text: String) -> String {
+        text
+            .replacingOccurrences(of: "&nbsp;", with: " ")
+            .replacingOccurrences(of: "&#39;", with: "'")
+            .replacingOccurrences(of: "&quot;", with: "\"")
+            .replacingOccurrences(of: "&gt;", with: ">")
+            .replacingOccurrences(of: "&lt;", with: "<")
+            .replacingOccurrences(of: "&amp;", with: "&")
     }
 
     private func downloadAndVerify(asset: GitHubReleaseAsset, release: GitHubRelease) async throws -> URL {
@@ -586,6 +700,79 @@ enum UpdatePackageKind {
     case dmg
 }
 
+struct ReleaseAtomEntry {
+    var title = ""
+    var contentHTML = ""
+    var htmlURL: URL?
+}
+
+final class ReleaseAtomParser: NSObject, XMLParserDelegate {
+    private var entries: [ReleaseAtomEntry] = []
+    private var currentEntry: ReleaseAtomEntry?
+    private var currentElement: String?
+    private var buffer = ""
+
+    static func parseFirstEntry(from data: Data) -> ReleaseAtomEntry? {
+        let parserDelegate = ReleaseAtomParser()
+        let parser = XMLParser(data: data)
+        parser.delegate = parserDelegate
+        guard parser.parse() else { return nil }
+        return parserDelegate.entries.first
+    }
+
+    func parser(
+        _ parser: XMLParser,
+        didStartElement elementName: String,
+        namespaceURI: String?,
+        qualifiedName qName: String?,
+        attributes attributeDict: [String: String] = [:]
+    ) {
+        if elementName == "entry" {
+            currentEntry = ReleaseAtomEntry()
+            return
+        }
+
+        guard currentEntry != nil else { return }
+
+        if elementName == "title" || elementName == "content" {
+            currentElement = elementName
+            buffer = ""
+        } else if elementName == "link",
+                  attributeDict["rel"] == "alternate",
+                  let href = attributeDict["href"],
+                  let url = URL(string: href) {
+            currentEntry?.htmlURL = url
+        }
+    }
+
+    func parser(_ parser: XMLParser, foundCharacters string: String) {
+        guard currentElement != nil else { return }
+        buffer += string
+    }
+
+    func parser(
+        _ parser: XMLParser,
+        didEndElement elementName: String,
+        namespaceURI: String?,
+        qualifiedName qName: String?
+    ) {
+        guard currentEntry != nil else { return }
+
+        if elementName == "title", currentElement == "title" {
+            currentEntry?.title = buffer.trimmingCharacters(in: .whitespacesAndNewlines)
+            currentElement = nil
+            buffer = ""
+        } else if elementName == "content", currentElement == "content" {
+            currentEntry?.contentHTML = buffer.trimmingCharacters(in: .whitespacesAndNewlines)
+            currentElement = nil
+            buffer = ""
+        } else if elementName == "entry", let entry = currentEntry {
+            entries.append(entry)
+            currentEntry = nil
+        }
+    }
+}
+
 struct GitHubRelease: Decodable {
     let tagName: String
     let name: String?
@@ -610,16 +797,17 @@ struct GitHubRelease: Decodable {
         return trimmedBody.isEmpty ? "这个版本没有填写更新说明。" : trimmedBody
     }
 
-    func preferredInstallAsset(prefix: String, version: String) -> UpdateInstallAsset? {
+    func preferredInstallAssets(prefix: String, version: String) -> [UpdateInstallAsset] {
+        var installAssets: [UpdateInstallAsset] = []
         if let zipAsset = preferredAppZipAsset(prefix: prefix, version: version) {
-            return UpdateInstallAsset(kind: .appZip, asset: zipAsset)
+            installAssets.append(UpdateInstallAsset(kind: .appZip, asset: zipAsset))
         }
 
         if let dmgAsset = preferredDMGAsset(prefix: prefix, version: version) {
-            return UpdateInstallAsset(kind: .dmg, asset: dmgAsset)
+            installAssets.append(UpdateInstallAsset(kind: .dmg, asset: dmgAsset))
         }
 
-        return nil
+        return installAssets
     }
 
     private func preferredAppZipAsset(prefix: String, version: String) -> GitHubReleaseAsset? {
@@ -688,6 +876,7 @@ struct ReleaseVersion: Comparable {
 
 enum UpdateError: LocalizedError {
     case invalidReleaseURL
+    case invalidReleaseFeed
     case httpStatus(Int)
     case invalidChecksumFile
     case checksumMismatch(expected: String, actual: String)
@@ -696,6 +885,8 @@ enum UpdateError: LocalizedError {
         switch self {
         case .invalidReleaseURL:
             return "更新地址无效。"
+        case .invalidReleaseFeed:
+            return "没有从 GitHub Release 页面解析到最新版本。"
         case .httpStatus(let statusCode):
             return "GitHub 返回了 HTTP \(statusCode)。请稍后再试。"
         case .invalidChecksumFile:
