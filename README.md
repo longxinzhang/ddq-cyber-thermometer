@@ -1,18 +1,20 @@
-# 动动枪的电脑体温计
+# DDQ's Cyber Thermometer
 
-一个安静待在 macOS 顶栏里的电脑状态小组件。内存、CPU、核心温度，一眼看完。
+中文名：**动动枪赛博体温计**。
 
-![动动枪的电脑体温计主视觉](docs/assets/hero-preview.png)
+一个安静待在 macOS 顶栏里的赛博体温计。内存、CPU、核心温度，一眼看完。
+
+![DDQ's Cyber Thermometer 主视觉](docs/assets/hero-preview.png)
 
 ## 下载
 
 公开版本会放在 GitHub Release：
 
-- 下载最新版：`Releases` 页面里的 `动动枪的电脑体温计-0.1.0.dmg`
+- 下载最新版：`Releases` 页面里的 `DDQs-Cyber-Thermometer-0.1.0.dmg`
 - 当前版本：`v0.1.0`
 - 许可证：MIT
 
-安装方式：打开 DMG，把 `动动枪的电脑体温计.app` 拖到 `Applications`。
+安装方式：打开 DMG，把 `动动枪赛博体温计.app` 拖到 `Applications`。
 
 > 当前安装包是本地临时签名，未做 Apple Developer ID 公证。首次打开时如遇到系统拦截，可右键 App 选择“打开”，或到“系统设置 > 隐私与安全性”里允许打开。
 
@@ -47,15 +49,15 @@ Scripts/package-dmg.sh
 生成：
 
 ```text
-dist/动动枪的电脑体温计-0.1.0.dmg
-dist/动动枪的电脑体温计-0.1.0.dmg.sha256
+dist/DDQs-Cyber-Thermometer-0.1.0.dmg
+dist/DDQs-Cyber-Thermometer-0.1.0.dmg.sha256
 ```
 
 只构建 App：
 
 ```bash
 Scripts/build-app.sh
-open "build/动动枪的电脑体温计.app"
+open "build/动动枪赛博体温计.app"
 ```
 
 终端采样：

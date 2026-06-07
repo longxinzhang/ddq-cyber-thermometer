@@ -2,12 +2,12 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-PRODUCT_NAME="动动枪的电脑体温计"
+PRODUCT_NAME="动动枪赛博体温计"
 INFO_PLIST="$ROOT_DIR/Info.plist"
 VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$INFO_PLIST")"
 DIST_DIR="$ROOT_DIR/dist"
 STAGE_DIR="$ROOT_DIR/build/dmg-root"
-DMG_PATH="$DIST_DIR/$PRODUCT_NAME-$VERSION.dmg"
+DMG_PATH="$DIST_DIR/DDQs-Cyber-Thermometer-$VERSION.dmg"
 
 mkdir -p "$DIST_DIR"
 
@@ -24,7 +24,8 @@ cp -R "$APP_PATH" "$STAGE_DIR/$PRODUCT_NAME.app"
 ln -s /Applications "$STAGE_DIR/Applications"
 
 cat > "$STAGE_DIR/安装说明.txt" <<EOF
-动动枪的电脑体温计
+DDQ's Cyber Thermometer
+动动枪赛博体温计
 
 安装：
 1. 把“$PRODUCT_NAME.app”拖到 Applications 文件夹。

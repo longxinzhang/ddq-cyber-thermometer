@@ -1,4 +1,6 @@
-# 动动枪的电脑体温计 v0.1.0
+# DDQ's Cyber Thermometer v0.1.0
+
+中文名：动动枪赛博体温计
 
 第一个公开版本。
 
@@ -12,6 +14,6 @@
 
 ## 安装
 
-下载 `动动枪的电脑体温计-0.1.0.dmg`，打开后把 App 拖到 Applications。
+下载 `DDQs-Cyber-Thermometer-0.1.0.dmg`，打开后把 `动动枪赛博体温计.app` 拖到 Applications。
 
 当前安装包为本地临时签名，未做 Apple Developer ID 公证。首次打开时如遇到系统拦截，可右键 App 选择“打开”，或在“系统设置 > 隐私与安全性”中允许打开。

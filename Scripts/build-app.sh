@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 INTERNAL_NAME="MacHealthGuardian"
-PRODUCT_NAME="动动枪的电脑体温计"
+PRODUCT_NAME="动动枪赛博体温计"
 APP_DIR="$ROOT_DIR/build/$PRODUCT_NAME.app"
 INFO_PLIST="$ROOT_DIR/Info.plist"
 VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$INFO_PLIST")"

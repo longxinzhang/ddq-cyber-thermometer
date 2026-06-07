@@ -46,25 +46,31 @@ func renderHero(size: NSSize) -> Data {
         }
 
         drawText(
-            "动动枪的电脑体温计",
-            in: NSRect(x: 180, y: 380, width: 600, height: 64),
-            font: .systemFont(ofSize: 50, weight: .bold),
+            "DDQ's Cyber Thermometer",
+            in: NSRect(x: 180, y: 392, width: 680, height: 58),
+            font: .systemFont(ofSize: 40, weight: .bold),
             color: .white
         )
         drawText(
+            "动动枪赛博体温计",
+            in: NSRect(x: 184, y: 342, width: 560, height: 42),
+            font: .systemFont(ofSize: 30, weight: .semibold),
+            color: NSColor.white.withAlphaComponent(0.9)
+        )
+        drawText(
             "一个安静待在 macOS 顶栏里的电脑状态小组件。",
-            in: NSRect(x: 184, y: 332, width: 560, height: 38),
-            font: .systemFont(ofSize: 26, weight: .medium),
+            in: NSRect(x: 184, y: 304, width: 560, height: 34),
+            font: .systemFont(ofSize: 23, weight: .medium),
             color: NSColor.white.withAlphaComponent(0.78)
         )
         drawText(
             "内存、CPU、核心温度，一眼看完。",
-            in: NSRect(x: 184, y: 286, width: 520, height: 34),
-            font: .systemFont(ofSize: 24, weight: .regular),
+            in: NSRect(x: 184, y: 260, width: 520, height: 32),
+            font: .systemFont(ofSize: 22, weight: .regular),
             color: NSColor(calibratedRed: 0.68, green: 0.93, blue: 0.9, alpha: 1)
         )
 
-        drawDownloadPill(in: NSRect(x: 184, y: 210, width: 230, height: 52))
+        drawDownloadPill(in: NSRect(x: 184, y: 188, width: 230, height: 52))
     }
 }
 

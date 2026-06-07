@@ -2,10 +2,10 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-REPO_NAME="${GITHUB_REPO_NAME:-dongdongqiang-computer-thermometer}"
+REPO_NAME="${GITHUB_REPO_NAME:-ddq-cyber-thermometer}"
 TAG="v0.1.0"
-TITLE="动动枪的电脑体温计 v0.1.0"
-DMG="$ROOT_DIR/dist/动动枪的电脑体温计-0.1.0.dmg"
+TITLE="DDQ's Cyber Thermometer v0.1.0"
+DMG="$ROOT_DIR/dist/DDQs-Cyber-Thermometer-0.1.0.dmg"
 SHA="$DMG.sha256"
 
 cd "$ROOT_DIR"

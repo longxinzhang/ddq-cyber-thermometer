@@ -13,7 +13,7 @@ struct MacHealthGuardianApp: App {
 
         if arguments.contains("--help") {
             print("""
-            动动枪的电脑体温计
+            DDQ's Cyber Thermometer / 动动枪赛博体温计
 
             Usage:
               MacHealthGuardian             Launch menu bar thermometer
