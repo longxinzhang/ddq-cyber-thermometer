@@ -29,6 +29,14 @@ public struct NetworkSnapshot: Sendable {
         "↓\(downloadBytesPerSecond.compactBytesPerSecondText) ↑\(uploadBytesPerSecond.compactBytesPerSecondText)"
     }
 
+    public var downloadShortText: String {
+        "↓\(downloadBytesPerSecond.compactBytesPerSecondText)"
+    }
+
+    public var uploadShortText: String {
+        "↑\(uploadBytesPerSecond.compactBytesPerSecondText)"
+    }
+
     public var interfaceText: String {
         guard !activeInterfaceNames.isEmpty else { return "暂无实时流量" }
         return activeInterfaceNames.joined(separator: ", ")

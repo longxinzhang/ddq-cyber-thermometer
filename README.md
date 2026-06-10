@@ -10,8 +10,8 @@
 
 公开版本会放在 GitHub Release：
 
-- 下载最新版：`Releases` 页面里的 `DDQs-Cyber-Thermometer-0.7.0.dmg`
-- 当前版本：`v0.7.0`
+- 下载最新版：`Releases` 页面里的 `DDQs-Cyber-Thermometer-0.7.1.dmg`
+- 当前版本：`v0.7.1`
 - 许可证：MIT
 
 安装方式：打开 DMG，把 `动动枪赛博体温计.app` 拖到 `Applications`。
@@ -58,10 +58,10 @@ Scripts/package-dmg.sh
 生成：
 
 ```text
-dist/DDQs-Cyber-Thermometer-0.7.0.dmg
-dist/DDQs-Cyber-Thermometer-0.7.0.dmg.sha256
-dist/DDQs-Cyber-Thermometer-0.7.0.app.zip
-dist/DDQs-Cyber-Thermometer-0.7.0.app.zip.sha256
+dist/DDQs-Cyber-Thermometer-0.7.1.dmg
+dist/DDQs-Cyber-Thermometer-0.7.1.dmg.sha256
+dist/DDQs-Cyber-Thermometer-0.7.1.app.zip
+dist/DDQs-Cyber-Thermometer-0.7.1.app.zip.sha256
 ```
 
 只构建 App：

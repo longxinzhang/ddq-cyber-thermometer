@@ -116,8 +116,8 @@ func drawMenuBar(in rect: NSRect, widgetScale: CGFloat) {
     drawText("Wi-Fi", in: NSRect(x: rect.maxX - 210, y: rect.minY + rect.height * 0.31, width: 60, height: 24), font: .systemFont(ofSize: rect.height * 0.25, weight: .medium), color: NSColor.white.withAlphaComponent(0.74))
     drawText("12:40", in: NSRect(x: rect.maxX - 112, y: rect.minY + rect.height * 0.31, width: 70, height: 24), font: .monospacedDigitSystemFont(ofSize: rect.height * 0.25, weight: .medium), color: NSColor.white.withAlphaComponent(0.82))
 
-    let widgetWidth = 82 * widgetScale
-    let widgetRect = NSRect(x: rect.maxX - 320, y: rect.midY - 12 * widgetScale, width: widgetWidth, height: 24 * widgetScale)
+    let widgetWidth = 86 * widgetScale
+    let widgetRect = NSRect(x: rect.maxX - 365, y: rect.midY - 12 * widgetScale, width: widgetWidth, height: 24 * widgetScale)
     drawCompactWidget(in: widgetRect, temperature: "43°", scale: widgetScale)
 }
 
@@ -129,9 +129,9 @@ func drawLargeWidget(in rect: NSRect) {
     path.lineWidth = 1.4
     path.stroke()
 
-    drawCompactWidget(in: NSRect(x: rect.minX + 52, y: rect.midY - 42, width: 220, height: 84), temperature: "43°", scale: 3.35)
-    drawText("悬停显示完整数值", in: NSRect(x: rect.minX + 275, y: rect.midY + 8, width: 210, height: 34), font: .systemFont(ofSize: 24, weight: .bold), color: .white)
-    drawText("内存 79% · CPU 15% · 温度 43°C", in: NSRect(x: rect.minX + 276, y: rect.midY - 30, width: 295, height: 28), font: .systemFont(ofSize: 17, weight: .medium), color: NSColor.white.withAlphaComponent(0.72))
+    drawCompactWidget(in: NSRect(x: rect.minX + 52, y: rect.midY - 42, width: 264, height: 84), temperature: "43°", scale: 3.35)
+    drawText("悬停显示完整数值", in: NSRect(x: rect.minX + 322, y: rect.midY + 8, width: 210, height: 34), font: .systemFont(ofSize: 24, weight: .bold), color: .white)
+    drawText("内存 79% · CPU 15% · 温度 43°C", in: NSRect(x: rect.minX + 323, y: rect.midY - 30, width: 295, height: 28), font: .systemFont(ofSize: 17, weight: .medium), color: NSColor.white.withAlphaComponent(0.72))
 }
 
 func drawTinyReadouts(in rect: NSRect) {
@@ -162,10 +162,28 @@ func drawCompactWidget(in rect: NSRect, temperature: String, scale: CGFloat) {
     drawColumn(NSRect(x: inner.minX, y: inner.minY, width: columnWidth, height: inner.height), fraction: 0.79, color: .systemBlue)
     drawColumn(NSRect(x: inner.minX + columnWidth + gap, y: inner.minY, width: columnWidth, height: inner.height), fraction: 0.15, color: .systemGreen)
 
+    let temperatureFont = NSFont.monospacedDigitSystemFont(ofSize: 13.2 * scale, weight: .semibold)
+    let networkFont = NSFont.monospacedDigitSystemFont(ofSize: 8.8 * scale, weight: .semibold)
+    let temperatureX = trackRect.maxX + 3 * scale
+    let temperatureWidth = ceil(temperature.size(withAttributes: [.font: temperatureFont]).width)
     drawText(
         temperature,
-        in: NSRect(x: trackRect.maxX + 3 * scale, y: rect.midY - 9.5 * scale, width: rect.width - trackRect.width, height: 22 * scale),
-        font: .monospacedDigitSystemFont(ofSize: 13.2 * scale, weight: .semibold),
+        in: NSRect(x: temperatureX, y: rect.midY - 9.5 * scale, width: temperatureWidth + 2 * scale, height: 22 * scale),
+        font: temperatureFont,
+        color: .white
+    )
+
+    let networkX = temperatureX + temperatureWidth + 4 * scale
+    drawText(
+        "↓6KB",
+        in: NSRect(x: networkX, y: rect.midY + 0.4 * scale, width: rect.maxX - networkX, height: 10 * scale),
+        font: networkFont,
+        color: .white
+    )
+    drawText(
+        "↑4KB",
+        in: NSRect(x: networkX, y: rect.midY - 8.3 * scale, width: rect.maxX - networkX, height: 10 * scale),
+        font: networkFont,
         color: .white
     )
 }
@@ -184,7 +202,7 @@ func drawDownloadPill(in rect: NSRect) {
     let path = NSBezierPath(roundedRect: rect, xRadius: 8, yRadius: 8)
     NSColor(calibratedRed: 0.68, green: 0.93, blue: 0.9, alpha: 1).setFill()
     path.fill()
-    drawText("下载 v0.7.0", in: NSRect(x: rect.minX + 30, y: rect.minY + 14, width: rect.width - 60, height: 24), font: .systemFont(ofSize: 20, weight: .bold), color: NSColor(calibratedRed: 0.04, green: 0.1, blue: 0.1, alpha: 1))
+    drawText("下载 v0.7.1", in: NSRect(x: rect.minX + 30, y: rect.minY + 14, width: rect.width - 60, height: 24), font: .systemFont(ofSize: 20, weight: .bold), color: NSColor(calibratedRed: 0.04, green: 0.1, blue: 0.1, alpha: 1))
 }
 
 func drawThermometer(size: CGFloat, origin: CGPoint) {

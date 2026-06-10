@@ -1,12 +1,14 @@
-# DDQ's Cyber Thermometer v0.7.0
+# DDQ's Cyber Thermometer v0.7.1
 
 中文名：动动枪赛博体温计
 
-本版本加入状态栏实时网络流量监看，顶栏可直接看到下载和上传速率，VPN/隧道接口流量也会计入统计。
+本版本优化顶栏实时网络流量的视觉显示，让下载和上传速率更紧凑、更清晰。
 
 ## 功能
 
 - 顶栏融合小组件：迷你柱显示内存压力、内存和 CPU，右侧显示核心温度。
+- 下载和上传速率改为上下两行显示，减少状态栏横向占用。
+- 网络速率文字改为跟温度数字一致的高对比颜色，避免和背景融在一起。
 - 顶栏显示实时下载和上传速率，自动使用 `KB/s` 或 `MB/s`。
 - 网络统计观察常规网卡和 VPN/隧道接口，包括 `en*`、`utun*`、`ppp*`、`tun*`、`tap*`、`wg*` 等，并尽量避免同一条 VPN 流量被重复计算。
 - 鼠标悬停显示完整数值。
@@ -30,8 +32,8 @@
 
 ## 安装
 
-下载 `DDQs-Cyber-Thermometer-0.7.0.dmg`，打开后把 `动动枪赛博体温计.app` 拖到 Applications。
+下载 `DDQs-Cyber-Thermometer-0.7.1.dmg`，打开后把 `动动枪赛博体温计.app` 拖到 Applications。
 
-Release 同时提供 `DDQs-Cyber-Thermometer-0.7.0.app.zip`，供 App 内在线升级优先使用。
+Release 同时提供 `DDQs-Cyber-Thermometer-0.7.1.app.zip`，供 App 内在线升级优先使用。
 
 当前安装包为本地临时签名，未做 Apple Developer ID 公证。首次打开时如遇到系统拦截，可右键 App 选择“打开”，或在“系统设置 > 隐私与安全性”中允许打开。

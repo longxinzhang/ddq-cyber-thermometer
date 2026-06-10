@@ -4,7 +4,7 @@ import MacHealthGuardianCore
 final class StatusImageRenderer {
     private let height: CGFloat = 22
     private let temperatureFont = NSFont.monospacedDigitSystemFont(ofSize: 13.2, weight: .semibold)
-    private let networkFont = NSFont.monospacedDigitSystemFont(ofSize: 10.2, weight: .medium)
+    private let networkFont = NSFont.monospacedDigitSystemFont(ofSize: 8.8, weight: .semibold)
     private let defaultMetrics: [MenuBarDisplayMetric] = [.memoryPressure, .memoryUsage, .cpuUsage]
 
     var placeholderSize: NSSize {
@@ -33,9 +33,12 @@ final class StatusImageRenderer {
         let temperatureAttributes: [NSAttributedString.Key: Any] = [.font: temperatureFont]
         let networkAttributes: [NSAttributedString.Key: Any] = [.font: networkFont]
         let temperatureWidth = ceil(snapshot.temperatureShortText.size(withAttributes: temperatureAttributes).width)
-        let networkWidth = ceil(snapshot.network.shortText.size(withAttributes: networkAttributes).width)
+        let networkWidth = max(
+            ceil(snapshot.network.downloadShortText.size(withAttributes: networkAttributes).width),
+            ceil(snapshot.network.uploadShortText.size(withAttributes: networkAttributes).width)
+        )
         let textX = textStartX(metricCount: displayMetrics.count)
-        return NSSize(width: max(38, textX + temperatureWidth + 5 + networkWidth + 1), height: height)
+        return NSSize(width: max(38, textX + temperatureWidth + 4 + networkWidth + 1), height: height)
     }
 
     private func draw(_ snapshot: SystemSnapshot, displayMetrics: [MenuBarDisplayMetric], size: NSSize) {
@@ -53,7 +56,7 @@ final class StatusImageRenderer {
             temperature: snapshot.coreTemperatureC,
             x: textStartX(metricCount: displayMetrics.count)
         )
-        drawNetworkText(snapshot.network.shortText, x: networkX + 5)
+        drawNetworkText(snapshot.network, temperature: snapshot.coreTemperatureC, x: networkX + 4)
     }
 
     private func drawMetricBars(
@@ -126,13 +129,17 @@ final class StatusImageRenderer {
         return x + ceil(text.size(withAttributes: attributes).width)
     }
 
-    private func drawNetworkText(_ text: String, x: CGFloat) {
+    private func drawNetworkText(_ network: NetworkSnapshot, temperature: Double?, x: CGFloat) {
         let attributes: [NSAttributedString.Key: Any] = [
             .font: networkFont,
-            .foregroundColor: NSColor.secondaryLabelColor
+            .foregroundColor: temperatureTextColor(temperature)
         ]
-        text.draw(
-            at: NSPoint(x: x, y: 4.4),
+        network.downloadShortText.draw(
+            at: NSPoint(x: x, y: 10.4),
+            withAttributes: attributes
+        )
+        network.uploadShortText.draw(
+            at: NSPoint(x: x, y: 1.7),
             withAttributes: attributes
         )
     }
