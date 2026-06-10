@@ -10,8 +10,8 @@
 
 公开版本会放在 GitHub Release：
 
-- 下载最新版：`Releases` 页面里的 `DDQs-Cyber-Thermometer-0.7.1.dmg`
-- 当前版本：`v0.7.1`
+- 下载最新版：`Releases` 页面里的 `DDQs-Cyber-Thermometer-0.7.2.dmg`
+- 当前版本：`v0.7.2`
 - 许可证：MIT
 
 安装方式：打开 DMG，把 `动动枪赛博体温计.app` 拖到 `Applications`。
@@ -58,10 +58,10 @@ Scripts/package-dmg.sh
 生成：
 
 ```text
-dist/DDQs-Cyber-Thermometer-0.7.1.dmg
-dist/DDQs-Cyber-Thermometer-0.7.1.dmg.sha256
-dist/DDQs-Cyber-Thermometer-0.7.1.app.zip
-dist/DDQs-Cyber-Thermometer-0.7.1.app.zip.sha256
+dist/DDQs-Cyber-Thermometer-0.7.2.dmg
+dist/DDQs-Cyber-Thermometer-0.7.2.dmg.sha256
+dist/DDQs-Cyber-Thermometer-0.7.2.app.zip
+dist/DDQs-Cyber-Thermometer-0.7.2.app.zip.sha256
 ```
 
 只构建 App：
@@ -98,6 +98,8 @@ v0.5.0 修复了 macOS 26.4 / Apple Silicon M5 机型上 AppleSMC 风扇读取�
 ## 网络流量说明
 
 v0.7.0 起，顶栏会显示实时下载和上传速率，自动在 `KB/s` 和 `MB/s` 间切换。统计会观察常规网卡和 VPN/隧道接口，例如 `en*`、`utun*`、`ppp*`、`tun*`、`tap*`、`wg*`，因此 VPN 流量也会计入；展示速率会尽量避免把同一条 VPN 流量在物理网卡和隧道接口上重复计算。
+
+v0.7.2 起，顶栏紧凑流量使用固定三位有效数字显示，超过当前单位后自动升到更高单位，例如 `999KB` 显示为 `0.99MB`，`120MB` 显示为 `0.12GB`。
 
 ## 在线升级
 

@@ -33,10 +33,7 @@ final class StatusImageRenderer {
         let temperatureAttributes: [NSAttributedString.Key: Any] = [.font: temperatureFont]
         let networkAttributes: [NSAttributedString.Key: Any] = [.font: networkFont]
         let temperatureWidth = ceil(snapshot.temperatureShortText.size(withAttributes: temperatureAttributes).width)
-        let networkWidth = max(
-            ceil(snapshot.network.downloadShortText.size(withAttributes: networkAttributes).width),
-            ceil(snapshot.network.uploadShortText.size(withAttributes: networkAttributes).width)
-        )
+        let networkWidth = ceil("↓99.9MB".size(withAttributes: networkAttributes).width)
         let textX = textStartX(metricCount: displayMetrics.count)
         return NSSize(width: max(38, textX + temperatureWidth + 4 + networkWidth + 1), height: height)
     }

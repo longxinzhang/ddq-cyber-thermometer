@@ -18,9 +18,12 @@ final class FormattingTests: XCTestCase {
         XCTAssertEqual(42_000.0.bytesPerSecondText, "41 KB/s")
         XCTAssertEqual(1_572_864.0.bytesPerSecondText, "1.5 MB/s")
 
-        XCTAssertEqual(512.0.compactBytesPerSecondText, "0KB")
-        XCTAssertEqual(1_536.0.compactBytesPerSecondText, "1.5KB")
-        XCTAssertEqual(42_000.0.compactBytesPerSecondText, "41KB")
-        XCTAssertEqual(1_572_864.0.compactBytesPerSecondText, "1.5MB")
+        XCTAssertEqual(100.0.compactBytesPerSecondText, "0.10KB")
+        XCTAssertEqual(512.0.compactBytesPerSecondText, "0.51KB")
+        XCTAssertEqual(1_536.0.compactBytesPerSecondText, "1.53KB")
+        XCTAssertEqual(10_240.0.compactBytesPerSecondText, "10.2KB")
+        XCTAssertEqual(42_000.0.compactBytesPerSecondText, "42.0KB")
+        XCTAssertEqual(999_000.0.compactBytesPerSecondText, "0.99MB")
+        XCTAssertEqual(120_000_000.0.compactBytesPerSecondText, "0.12GB")
     }
 }
