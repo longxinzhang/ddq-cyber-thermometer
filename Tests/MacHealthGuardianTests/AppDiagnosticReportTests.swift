@@ -24,6 +24,8 @@ final class AppDiagnosticReportTests: XCTestCase {
         XCTAssertTrue(report.contains("压缩内存: 1.4 GB"))
         XCTAssertTrue(report.contains("交换空间: 0.7 GB"))
         XCTAssertTrue(report.contains("Swap Out 速率: 125 pages/s"))
+        XCTAssertTrue(report.contains("网络流量: 下载 24 KB/s  上传 12 KB/s"))
+        XCTAssertTrue(report.contains("网络接口: en0, utun4"))
         XCTAssertTrue(report.contains("CPU 占用: 23%"))
         XCTAssertTrue(report.contains("核心温度: 67°C"))
         XCTAssertTrue(report.contains("风扇转速: 1800 RPM  SMC"))
@@ -49,6 +51,11 @@ final class AppDiagnosticReportTests: XCTestCase {
                     swapUsedGB: 0.7,
                     swapOutsPerSecond: 125
                 )
+            ),
+            network: NetworkSnapshot(
+                downloadBytesPerSecond: 24_576,
+                uploadBytesPerSecond: 12_288,
+                activeInterfaceNames: ["en0", "utun4"]
             ),
             cpuUsage: 23,
             coreTemperatureC: 67,

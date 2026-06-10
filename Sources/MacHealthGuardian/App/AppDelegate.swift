@@ -11,6 +11,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let menu = NSMenu()
     private let memoryPressureItem = NSMenuItem(title: "内存压力 --", action: nil, keyEquivalent: "")
     private let memoryItem = NSMenuItem(title: "内存 --", action: nil, keyEquivalent: "")
+    private let networkItem = NSMenuItem(title: "网络流量 --", action: nil, keyEquivalent: "")
     private let cpuItem = NSMenuItem(title: "CPU --", action: nil, keyEquivalent: "")
     private let temperatureItem = NSMenuItem(title: "核心温度 --", action: nil, keyEquivalent: "")
     private let fanItem = NSMenuItem(title: "风扇转速 --", action: nil, keyEquivalent: "")
@@ -56,12 +57,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private func configureMenu() {
         menu.delegate = self
 
-        [memoryPressureItem, memoryItem, cpuItem, temperatureItem, fanItem, updatedItem].forEach { item in
+        [memoryPressureItem, memoryItem, networkItem, cpuItem, temperatureItem, fanItem, updatedItem].forEach { item in
             item.isEnabled = false
         }
 
         menu.addItem(memoryPressureItem)
         menu.addItem(memoryItem)
+        menu.addItem(networkItem)
         menu.addItem(cpuItem)
         menu.addItem(temperatureItem)
         menu.addItem(fanItem)
@@ -131,6 +133,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         memoryPressureItem.title = "内存压力 \(snapshot.memory.pressure.level.displayText)  \(snapshot.memory.pressure.scoreText)"
         memoryItem.title = "内存占用 \(snapshot.memory.usedPercent.percentText)  \(snapshot.memory.usedGB.gbText) / \(snapshot.memory.totalGB.gbText)"
+        networkItem.title = "网络流量 \(snapshot.network.displayText)"
         cpuItem.title = "CPU 占用 \(snapshot.cpuUsage.percentText)"
         temperatureItem.title = "核心温度 \(snapshot.temperatureText)  \(snapshot.thermalStateText)"
         fanItem.title = "风扇转速 \(snapshot.fan.displayText)"

@@ -2,7 +2,7 @@
 
 中文名：**动动枪赛博体温计**。
 
-一个安静待在 macOS 顶栏里的赛博体温计。内存、CPU、核心温度，一眼看完。
+一个安静待在 macOS 顶栏里的赛博体温计。内存、CPU、核心温度、实时网络流量，一眼看完。
 
 ![DDQ's Cyber Thermometer 主视觉](docs/assets/hero-preview.png)
 
@@ -10,8 +10,8 @@
 
 公开版本会放在 GitHub Release：
 
-- 下载最新版：`Releases` 页面里的 `DDQs-Cyber-Thermometer-0.6.0.dmg`
-- 当前版本：`v0.6.0`
+- 下载最新版：`Releases` 页面里的 `DDQs-Cyber-Thermometer-0.7.0.dmg`
+- 当前版本：`v0.7.0`
 - 许可证：MIT
 
 安装方式：打开 DMG，把 `动动枪赛博体温计.app` 拖到 `Applications`。
@@ -23,9 +23,9 @@
 ![顶栏小组件展示](docs/assets/widget-closeup.png)
 
 - 顶栏迷你柱：内存压力、内存占用率、CPU 占用率
-- 紧贴的数字：核心温度
-- 鼠标悬停：显示完整的内存、CPU、核心温度
-- 点击菜单：显示风扇当前转速，支持调整顶栏显示项、开机启动、检查更新、复制诊断信息、刷新或退出
+- 紧贴的数字：核心温度、实时下载速率、实时上传速率
+- 鼠标悬停：显示完整的内存、CPU、核心温度和网络流量
+- 点击菜单：显示网络流量和风扇当前转速，支持调整顶栏显示项、开机启动、检查更新、复制诊断信息、刷新或退出
 
 ## 介绍页面
 
@@ -58,10 +58,10 @@ Scripts/package-dmg.sh
 生成：
 
 ```text
-dist/DDQs-Cyber-Thermometer-0.6.0.dmg
-dist/DDQs-Cyber-Thermometer-0.6.0.dmg.sha256
-dist/DDQs-Cyber-Thermometer-0.6.0.app.zip
-dist/DDQs-Cyber-Thermometer-0.6.0.app.zip.sha256
+dist/DDQs-Cyber-Thermometer-0.7.0.dmg
+dist/DDQs-Cyber-Thermometer-0.7.0.dmg.sha256
+dist/DDQs-Cyber-Thermometer-0.7.0.app.zip
+dist/DDQs-Cyber-Thermometer-0.7.0.app.zip.sha256
 ```
 
 只构建 App：
@@ -94,6 +94,10 @@ v0.2.1 起，点击顶栏图标后菜单会显示风扇当前转速。工具会�
 v0.5.0 修复了 macOS 26.4 / Apple Silicon M5 机型上 AppleSMC 风扇读取结构偏移和 `flt` 浮点解码问题。
 
 部分 Apple Silicon 机型没有风扇，或系统不向普通 App 暴露风扇转速；这时菜单会显示 `无风扇` 或 `未读取`。
+
+## 网络流量说明
+
+v0.7.0 起，顶栏会显示实时下载和上传速率，自动在 `KB/s` 和 `MB/s` 间切换。统计会观察常规网卡和 VPN/隧道接口，例如 `en*`、`utun*`、`ppp*`、`tun*`、`tap*`、`wg*`，因此 VPN 流量也会计入；展示速率会尽量避免把同一条 VPN 流量在物理网卡和隧道接口上重复计算。
 
 ## 在线升级
 

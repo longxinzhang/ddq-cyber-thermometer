@@ -2,6 +2,7 @@ import Foundation
 
 public struct SystemSnapshot: Sendable {
     public let memory: MemorySnapshot
+    public let network: NetworkSnapshot
     public let cpuUsage: Double
     public let coreTemperatureC: Double?
     public let fan: FanSpeedSnapshot
@@ -11,6 +12,7 @@ public struct SystemSnapshot: Sendable {
     public static var placeholder: SystemSnapshot {
         SystemSnapshot(
             memory: .empty,
+            network: .empty,
             cpuUsage: 0,
             coreTemperatureC: nil,
             fan: .unknown,
@@ -50,7 +52,7 @@ public struct SystemSnapshot: Sendable {
     }
 
     public var toolTipText: String {
-        "内存压力 \(memory.pressure.scoreText)  内存 \(memory.usedPercent.percentText)  CPU \(cpuUsage.percentText)  核心温度 \(temperatureText)"
+        "内存压力 \(memory.pressure.scoreText)  内存 \(memory.usedPercent.percentText)  CPU \(cpuUsage.percentText)  核心温度 \(temperatureText)  \(network.displayText)"
     }
 
     public var summaryText: String {
@@ -60,6 +62,8 @@ public struct SystemSnapshot: Sendable {
             "可用内存: \(memory.availableGB.gbText)",
             "压缩内存: \(memory.compressedGB.gbText)",
             "交换空间: \(memory.pressure.swapUsedGB.gbText)",
+            "网络流量: \(network.displayText)",
+            "网络接口: \(network.interfaceText)",
             "CPU 占用: \(cpuUsage.percentText)",
             "核心温度: \(temperatureText)",
             "风扇转速: \(fan.displayText)",

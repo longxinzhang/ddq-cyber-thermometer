@@ -3,6 +3,7 @@ import Foundation
 
 public final class SystemSampler: @unchecked Sendable {
     private let memorySampler: MemorySampler
+    private let networkSampler: NetworkSampler
     private let temperatureReader: TemperatureReader
     private let fanSpeedReader: FanSpeedReader
     private var previousCPUTicks: CPUTicks?
@@ -10,6 +11,7 @@ public final class SystemSampler: @unchecked Sendable {
     public init() {
         let shell = Shell()
         self.memorySampler = MemorySampler(shell: shell)
+        self.networkSampler = NetworkSampler()
         self.temperatureReader = TemperatureReader(shell: shell)
         self.fanSpeedReader = FanSpeedReader(shell: shell)
         self.previousCPUTicks = CPUTicks.current()
@@ -19,6 +21,7 @@ public final class SystemSampler: @unchecked Sendable {
         let updatedAt = Date()
         return SystemSnapshot(
             memory: memorySampler.sample(at: updatedAt),
+            network: networkSampler.sample(at: updatedAt),
             cpuUsage: readCPUUsage(),
             coreTemperatureC: temperatureReader.read(),
             fan: fanSpeedReader.read(),
