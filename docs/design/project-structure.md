@@ -81,13 +81,13 @@ Swift Package 配置。当前定义：
 
 ### `Info.plist`
 
-App Bundle 元信息。当前 bundle 标识为 `com.dongdongqiang.cyber-thermometer`，展示名为“动动枪赛博体温计”，版本为 `0.7.2`。`LSUIElement` 为 `true`，表示 App 作为菜单栏应用运行，不显示 Dock 图标。
+App Bundle 元信息。当前 bundle 标识为 `com.dongdongqiang.cyber-thermometer`，展示名为“动动枪赛博体温计”，版本为 `0.8.0`。`LSUIElement` 为 `true`，表示 App 作为菜单栏应用运行，不显示 Dock 图标。
 
 ### `Sources/MacHealthGuardian/`
 
 App target，负责菜单栏应用入口和用户界面相关逻辑：
 
-- `App/`：SwiftUI App 入口、`AppDelegate` 和命令行模式。
+- `App/`：SwiftUI App 入口、`AppDelegate`、快捷入口设置和命令行模式。
 - `Rendering/`：状态栏图像绘制。
 - `Updates/`：更新检查 UI 流程和 ZIP/DMG 安装脚本执行。
 - `LaunchAtLogin/`：通过 `SMAppService.mainApp` 管理开机启动。
@@ -127,7 +127,7 @@ Core target，负责可复用、可测试的核心逻辑：
 ### `README.md` 与 `RELEASE_NOTES.md`
 
 - `README.md`：面向使用者和维护者的项目说明，包含下载、功能、打包、温度/风扇说明、在线升级和发布方式。
-- `RELEASE_NOTES.md`：当前版本发布说明，描述 v0.7.2 的功能和安装信息。
+- `RELEASE_NOTES.md`：当前版本发布说明，描述 v0.8.0 的功能和安装信息。
 
 ## 当前代码组织特点
 

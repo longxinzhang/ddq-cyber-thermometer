@@ -10,8 +10,8 @@
 
 公开版本会放在 GitHub Release：
 
-- 下载最新版：`Releases` 页面里的 `DDQs-Cyber-Thermometer-0.7.2.dmg`
-- 当前版本：`v0.7.2`
+- 下载最新版：`Releases` 页面里的 `DDQs-Cyber-Thermometer-0.8.0.dmg`
+- 当前版本：`v0.8.0`
 - 许可证：MIT
 
 安装方式：打开 DMG，把 `动动枪赛博体温计.app` 拖到 `Applications`。
@@ -25,7 +25,7 @@
 - 顶栏迷你柱：内存压力、内存占用率、CPU 占用率
 - 紧贴的数字：核心温度、实时下载速率、实时上传速率
 - 鼠标悬停：显示完整的内存、CPU、核心温度和网络流量
-- 点击菜单：显示网络流量和风扇当前转速，支持调整顶栏显示项、开机启动、检查更新、复制诊断信息、刷新或退出
+- 点击菜单：显示网络流量和风扇当前转速，支持快捷打开网页、管理快捷入口、调整顶栏显示项、开机启动、检查更新、复制诊断信息、刷新或退出
 
 ## 介绍页面
 
@@ -58,10 +58,10 @@ Scripts/package-dmg.sh
 生成：
 
 ```text
-dist/DDQs-Cyber-Thermometer-0.7.2.dmg
-dist/DDQs-Cyber-Thermometer-0.7.2.dmg.sha256
-dist/DDQs-Cyber-Thermometer-0.7.2.app.zip
-dist/DDQs-Cyber-Thermometer-0.7.2.app.zip.sha256
+dist/DDQs-Cyber-Thermometer-0.8.0.dmg
+dist/DDQs-Cyber-Thermometer-0.8.0.dmg.sha256
+dist/DDQs-Cyber-Thermometer-0.8.0.app.zip
+dist/DDQs-Cyber-Thermometer-0.8.0.app.zip.sha256
 ```
 
 只构建 App：
@@ -100,6 +100,12 @@ v0.5.0 修复了 macOS 26.4 / Apple Silicon M5 机型上 AppleSMC 风扇读取�
 v0.7.0 起，顶栏会显示实时下载和上传速率，自动在 `KB/s` 和 `MB/s` 间切换。统计会观察常规网卡和 VPN/隧道接口，例如 `en*`、`utun*`、`ppp*`、`tun*`、`tap*`、`wg*`，因此 VPN 流量也会计入；展示速率会尽量避免把同一条 VPN 流量在物理网卡和隧道接口上重复计算。
 
 v0.7.2 起，顶栏紧凑流量使用固定三位有效数字显示，超过当前单位后自动升到更高单位，例如 `999KB` 显示为 `0.99MB`，`120MB` 显示为 `0.12GB`。
+
+## 快捷入口
+
+v0.8.0 起，点击顶栏图标后菜单顶部提供 3 个快捷网页入口。默认入口为“雪鸡号池用量”，打开 `https://ddq.stats.trytrythisai.com/`。
+
+空入口点击后可填写名称和链接；已有入口可通过“管理快捷入口…”修改或清空。链接会用系统默认浏览器打开。
 
 ## 在线升级
 
