@@ -1,12 +1,15 @@
-# DDQ's Cyber Thermometer v0.8.0
+# DDQ's Cyber Thermometer v0.8.1
 
 中文名：动动枪赛博体温计
 
-本版本新增菜单顶部快捷网页入口，适合把常看的控制台、统计页或内部工具放进状态栏，一点就用默认浏览器打开。
+本版本替换应用图标为新的“动动枪赛博体温计”形象，并保持状态栏顶部实时指标小组件不变。
 
 ## 功能
 
 - 顶栏融合小组件：迷你柱显示内存压力、内存和 CPU，右侧显示核心温度。
+- 替换 `.app`、DMG 和 zip 更新包里的应用图标。
+- 应用图标源图改为项目根目录的 `icon.png`，后续打包会自动生成标准 macOS `AppIcon.icns`。
+- 介绍页主视觉和页面 app 图标同步使用新图标。
 - 点击菜单顶部提供 3 个快捷网页入口。
 - 默认快捷入口为“雪鸡号池用量”，链接 `https://ddq.stats.trytrythisai.com/`。
 - 空入口可直接点击添加名称和链接。
@@ -39,8 +42,8 @@
 
 ## 安装
 
-下载 `DDQs-Cyber-Thermometer-0.8.0.dmg`，打开后把 `动动枪赛博体温计.app` 拖到 Applications。
+下载 `DDQs-Cyber-Thermometer-0.8.1.dmg`，打开后把 `动动枪赛博体温计.app` 拖到 Applications。
 
-Release 同时提供 `DDQs-Cyber-Thermometer-0.8.0.app.zip`，供 App 内在线升级优先使用。
+Release 同时提供 `DDQs-Cyber-Thermometer-0.8.1.app.zip`，供 App 内在线升级优先使用。
 
 当前安装包为本地临时签名，未做 Apple Developer ID 公证。首次打开时如遇到系统拦截，可右键 App 选择“打开”，或在“系统设置 > 隐私与安全性”中允许打开。

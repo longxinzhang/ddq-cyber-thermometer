@@ -1,15 +1,25 @@
 import AppKit
 import Foundation
 
-guard CommandLine.arguments.count == 2 else {
-    FileHandle.standardError.write(Data("Usage: generate-icon.swift <output.iconset>\n".utf8))
+guard CommandLine.arguments.count == 3 else {
+    FileHandle.standardError.write(Data("Usage: generate-icon.swift <source.png> <output.iconset>\n".utf8))
     exit(64)
 }
 
-let outputURL = URL(fileURLWithPath: CommandLine.arguments[1])
+let sourceURL = URL(fileURLWithPath: CommandLine.arguments[1])
+let outputURL = URL(fileURLWithPath: CommandLine.arguments[2])
 let fileManager = FileManager.default
 try? fileManager.removeItem(at: outputURL)
 try fileManager.createDirectory(at: outputURL, withIntermediateDirectories: true)
+
+guard let sourceImage = NSImage(contentsOf: sourceURL),
+      sourceImage.isValid,
+      sourceImage.size.width > 0,
+      sourceImage.size.height > 0
+else {
+    FileHandle.standardError.write(Data("Could not read icon source: \(sourceURL.path)\n".utf8))
+    exit(66)
+}
 
 let variants: [(name: String, pixels: Int)] = [
     ("icon_16x16.png", 16),
@@ -25,90 +35,61 @@ let variants: [(name: String, pixels: Int)] = [
 ]
 
 for variant in variants {
-    let data = renderIcon(pixelSize: variant.pixels)
+    let data = renderIcon(sourceImage: sourceImage, pixelSize: variant.pixels)
     try data.write(to: outputURL.appendingPathComponent(variant.name))
 }
 
-func renderIcon(pixelSize: Int) -> Data {
+func renderIcon(sourceImage: NSImage, pixelSize: Int) -> Data {
     let size = CGFloat(pixelSize)
     let rect = NSRect(x: 0, y: 0, width: size, height: size)
-    let image = NSImage(size: rect.size)
+    guard let bitmap = NSBitmapImageRep(
+        bitmapDataPlanes: nil,
+        pixelsWide: pixelSize,
+        pixelsHigh: pixelSize,
+        bitsPerSample: 8,
+        samplesPerPixel: 4,
+        hasAlpha: true,
+        isPlanar: false,
+        colorSpaceName: .deviceRGB,
+        bytesPerRow: 0,
+        bitsPerPixel: 0
+    ) else {
+        fatalError("Failed to create bitmap for icon size \(pixelSize)")
+    }
 
-    image.lockFocus()
-    NSGraphicsContext.current?.imageInterpolation = .high
+    bitmap.size = rect.size
 
-    let backgroundPath = NSBezierPath(
-        roundedRect: rect.insetBy(dx: size * 0.055, dy: size * 0.055),
-        xRadius: size * 0.22,
-        yRadius: size * 0.22
+    NSGraphicsContext.saveGraphicsState()
+    guard let graphicsContext = NSGraphicsContext(bitmapImageRep: bitmap) else {
+        fatalError("Failed to create graphics context for icon size \(pixelSize)")
+    }
+    NSGraphicsContext.current = graphicsContext
+    graphicsContext.imageInterpolation = .high
+
+    NSColor.clear.setFill()
+    rect.fill()
+
+    let sourceSize = sourceImage.size
+    let scale = min(size / sourceSize.width, size / sourceSize.height)
+    let drawSize = NSSize(width: sourceSize.width * scale, height: sourceSize.height * scale)
+    let drawRect = NSRect(
+        x: (size - drawSize.width) / 2,
+        y: (size - drawSize.height) / 2,
+        width: drawSize.width,
+        height: drawSize.height
     )
-    NSGradient(colors: [
-        NSColor(calibratedRed: 0.08, green: 0.16, blue: 0.18, alpha: 1),
-        NSColor(calibratedRed: 0.07, green: 0.44, blue: 0.48, alpha: 1)
-    ])?.draw(in: backgroundPath, angle: -35)
+    sourceImage.draw(
+        in: drawRect,
+        from: NSRect(origin: .zero, size: sourceImage.size),
+        operation: .sourceOver,
+        fraction: 1
+    )
 
-    drawThermometer(size: size)
-    drawBars(size: size)
-    drawBadge(size: size)
+    NSGraphicsContext.restoreGraphicsState()
 
-    image.unlockFocus()
-
-    guard let tiff = image.tiffRepresentation,
-          let bitmap = NSBitmapImageRep(data: tiff),
-          let png = bitmap.representation(using: .png, properties: [:])
-    else {
+    guard let png = bitmap.representation(using: .png, properties: [:]) else {
         fatalError("Failed to render icon")
     }
 
     return png
-}
-
-func drawThermometer(size: CGFloat) {
-    let stem = NSRect(x: size * 0.44, y: size * 0.26, width: size * 0.13, height: size * 0.46)
-    let stemPath = NSBezierPath(roundedRect: stem, xRadius: size * 0.055, yRadius: size * 0.055)
-    NSColor.white.withAlphaComponent(0.24).setStroke()
-    stemPath.lineWidth = max(1, size * 0.018)
-    stemPath.stroke()
-
-    let fill = NSRect(x: stem.minX + size * 0.027, y: stem.minY + size * 0.032, width: stem.width - size * 0.054, height: stem.height * 0.62)
-    NSColor.systemCyan.setFill()
-    NSBezierPath(roundedRect: fill, xRadius: size * 0.025, yRadius: size * 0.025).fill()
-
-    let bulb = NSRect(x: size * 0.395, y: size * 0.16, width: size * 0.22, height: size * 0.22)
-    NSGradient(colors: [.systemCyan, .systemBlue])?.draw(
-        in: NSBezierPath(ovalIn: bulb),
-        angle: 90
-    )
-}
-
-func drawBars(size: CGFloat) {
-    let barWidth = max(2, size * 0.035)
-    let gap = size * 0.025
-    let bottom = size * 0.2
-    let leftX = size * 0.22
-    let heights = [size * 0.28, size * 0.43]
-
-    for (index, height) in heights.enumerated() {
-        let rect = NSRect(
-            x: leftX + CGFloat(index) * (barWidth + gap),
-            y: bottom,
-            width: barWidth,
-            height: height
-        )
-        NSColor.white.withAlphaComponent(index == 0 ? 0.92 : 0.62).setFill()
-        NSBezierPath(roundedRect: rect, xRadius: barWidth * 0.5, yRadius: barWidth * 0.5).fill()
-    }
-}
-
-func drawBadge(size: CGFloat) {
-    guard size >= 128 else { return }
-
-    let attributes: [NSAttributedString.Key: Any] = [
-        .font: NSFont.systemFont(ofSize: size * 0.15, weight: .bold),
-        .foregroundColor: NSColor.white.withAlphaComponent(0.94)
-    ]
-    "DDQ".draw(
-        in: NSRect(x: size * 0.22, y: size * 0.72, width: size * 0.56, height: size * 0.18),
-        withAttributes: attributes
-    )
 }

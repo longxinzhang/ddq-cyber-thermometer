@@ -81,7 +81,7 @@ Swift Package 配置。当前定义：
 
 ### `Info.plist`
 
-App Bundle 元信息。当前 bundle 标识为 `com.dongdongqiang.cyber-thermometer`，展示名为“动动枪赛博体温计”，版本为 `0.8.0`。`LSUIElement` 为 `true`，表示 App 作为菜单栏应用运行，不显示 Dock 图标。
+App Bundle 元信息。当前 bundle 标识为 `com.dongdongqiang.cyber-thermometer`，展示名为“动动枪赛博体温计”，版本为 `0.8.1`。`LSUIElement` 为 `true`，表示 App 作为菜单栏应用运行，不显示 Dock 图标。
 
 ### `Sources/MacHealthGuardian/`
 
@@ -110,10 +110,10 @@ Core target，负责可复用、可测试的核心逻辑：
 
 构建、打包、发布和素材生成脚本：
 
-- `build-app.sh`：执行 release 构建，生成 `.app` 目录，生成并写入图标，进行本地临时代码签名。
+- `build-app.sh`：执行 release 构建，生成 `.app` 目录，从 `icon.png` 生成并写入图标，进行本地临时代码签名。
 - `package-dmg.sh`：调用构建脚本，生成 DMG、`.app.zip` 和对应 SHA256 文件。
 - `publish-github.sh`：使用 GitHub CLI 推送代码、标签和 Release 资产，并尝试启用 GitHub Pages。
-- `generate-icon.swift`：生成 App iconset 和 icns 所需的 PNG 图标。
+- `generate-icon.swift`：从 `icon.png` 生成 App iconset 和 icns 所需的 PNG 图标。
 - `generate-marketing-assets.swift`：生成介绍页使用的宣传图与展示图。
 
 ### `docs/`
@@ -127,7 +127,7 @@ Core target，负责可复用、可测试的核心逻辑：
 ### `README.md` 与 `RELEASE_NOTES.md`
 
 - `README.md`：面向使用者和维护者的项目说明，包含下载、功能、打包、温度/风扇说明、在线升级和发布方式。
-- `RELEASE_NOTES.md`：当前版本发布说明，描述 v0.8.0 的功能和安装信息。
+- `RELEASE_NOTES.md`：当前版本发布说明，描述 v0.8.1 的功能和安装信息。
 
 ## 当前代码组织特点
 

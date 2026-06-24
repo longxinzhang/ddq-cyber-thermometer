@@ -9,6 +9,7 @@ INFO_PLIST="$ROOT_DIR/Info.plist"
 VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$INFO_PLIST")"
 ICONSET_DIR="$ROOT_DIR/build/AppIcon.iconset"
 ICON_FILE="$ROOT_DIR/build/AppIcon.icns"
+ICON_SOURCE="$ROOT_DIR/icon.png"
 
 cd "$ROOT_DIR"
 
@@ -45,7 +46,7 @@ fi
 rm -rf "$APP_DIR" "$ICONSET_DIR" "$ICON_FILE"
 mkdir -p "$APP_DIR/Contents/MacOS" "$APP_DIR/Contents/Resources"
 
-swift "$ROOT_DIR/Scripts/generate-icon.swift" "$ICONSET_DIR"
+swift "$ROOT_DIR/Scripts/generate-icon.swift" "$ICON_SOURCE" "$ICONSET_DIR"
 iconutil -c icns "$ICONSET_DIR" -o "$ICON_FILE"
 
 cp "$INFO_PLIST" "$APP_DIR/Contents/Info.plist"

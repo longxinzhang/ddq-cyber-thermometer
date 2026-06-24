@@ -3,6 +3,7 @@ import Foundation
 
 let root = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
 let assetsURL = root.appendingPathComponent("docs/assets", isDirectory: true)
+let appIconSourceURL = root.appendingPathComponent("icon.png")
 try FileManager.default.createDirectory(at: assetsURL, withIntermediateDirectories: true)
 
 try renderAppIcon(size: 512)
@@ -13,20 +14,29 @@ try renderWidgetCloseup(size: NSSize(width: 1200, height: 520))
     .write(to: assetsURL.appendingPathComponent("widget-closeup.png"))
 
 func renderAppIcon(size: CGFloat) -> Data {
-    pngData(size: NSSize(width: size, height: size)) { rect in
-        let backgroundPath = NSBezierPath(
-            roundedRect: rect.insetBy(dx: size * 0.055, dy: size * 0.055),
-            xRadius: size * 0.22,
-            yRadius: size * 0.22
-        )
-        NSGradient(colors: [
-            NSColor(calibratedRed: 0.08, green: 0.16, blue: 0.18, alpha: 1),
-            NSColor(calibratedRed: 0.07, green: 0.44, blue: 0.48, alpha: 1)
-        ])?.draw(in: backgroundPath, angle: -35)
+    guard let sourceImage = NSImage(contentsOf: appIconSourceURL) else {
+        fatalError("Missing app icon source: \(appIconSourceURL.path)")
+    }
 
-        drawThermometer(size: size, origin: .zero)
-        drawBars(size: size, origin: .zero)
-        drawBadge(size: size, origin: .zero)
+    return pngData(size: NSSize(width: size, height: size)) { rect in
+        NSColor.clear.setFill()
+        rect.fill()
+
+        let sourceSize = sourceImage.size
+        let scale = min(rect.width / sourceSize.width, rect.height / sourceSize.height)
+        let drawSize = NSSize(width: sourceSize.width * scale, height: sourceSize.height * scale)
+        let drawRect = NSRect(
+            x: rect.midX - drawSize.width / 2,
+            y: rect.midY - drawSize.height / 2,
+            width: drawSize.width,
+            height: drawSize.height
+        )
+        sourceImage.draw(
+            in: drawRect,
+            from: NSRect(origin: .zero, size: sourceImage.size),
+            operation: .sourceOver,
+            fraction: 1
+        )
     }
 }
 
@@ -202,7 +212,7 @@ func drawDownloadPill(in rect: NSRect) {
     let path = NSBezierPath(roundedRect: rect, xRadius: 8, yRadius: 8)
     NSColor(calibratedRed: 0.68, green: 0.93, blue: 0.9, alpha: 1).setFill()
     path.fill()
-    drawText("下载 v0.8.0", in: NSRect(x: rect.minX + 30, y: rect.minY + 14, width: rect.width - 60, height: 24), font: .systemFont(ofSize: 20, weight: .bold), color: NSColor(calibratedRed: 0.04, green: 0.1, blue: 0.1, alpha: 1))
+    drawText("下载 v0.8.1", in: NSRect(x: rect.minX + 30, y: rect.minY + 14, width: rect.width - 60, height: 24), font: .systemFont(ofSize: 20, weight: .bold), color: NSColor(calibratedRed: 0.04, green: 0.1, blue: 0.1, alpha: 1))
 }
 
 func drawThermometer(size: CGFloat, origin: CGPoint) {

@@ -10,8 +10,8 @@
 
 公开版本会放在 GitHub Release：
 
-- 下载最新版：`Releases` 页面里的 `DDQs-Cyber-Thermometer-0.8.0.dmg`
-- 当前版本：`v0.8.0`
+- 下载最新版：`Releases` 页面里的 `DDQs-Cyber-Thermometer-0.8.1.dmg`
+- 当前版本：`v0.8.1`
 - 许可证：MIT
 
 安装方式：打开 DMG，把 `动动枪赛博体温计.app` 拖到 `Applications`。
@@ -58,10 +58,10 @@ Scripts/package-dmg.sh
 生成：
 
 ```text
-dist/DDQs-Cyber-Thermometer-0.8.0.dmg
-dist/DDQs-Cyber-Thermometer-0.8.0.dmg.sha256
-dist/DDQs-Cyber-Thermometer-0.8.0.app.zip
-dist/DDQs-Cyber-Thermometer-0.8.0.app.zip.sha256
+dist/DDQs-Cyber-Thermometer-0.8.1.dmg
+dist/DDQs-Cyber-Thermometer-0.8.1.dmg.sha256
+dist/DDQs-Cyber-Thermometer-0.8.1.app.zip
+dist/DDQs-Cyber-Thermometer-0.8.1.app.zip.sha256
 ```
 
 只构建 App：
@@ -106,6 +106,10 @@ v0.7.2 起，顶栏紧凑流量使用固定三位有效数字显示，超过当�
 v0.8.0 起，点击顶栏图标后菜单顶部提供 3 个快捷网页入口。默认入口为“雪鸡号池用量”，打开 `https://ddq.stats.trytrythisai.com/`。
 
 空入口点击后可填写名称和链接；已有入口可通过“管理快捷入口…”修改或清空。链接会用系统默认浏览器打开。
+
+## 应用图标
+
+v0.8.1 起，App 使用项目根目录的 `icon.png` 作为应用图标源图。状态栏顶部小组件仍显示实时指标，不使用应用图标占位。
 
 ## 在线升级
 
