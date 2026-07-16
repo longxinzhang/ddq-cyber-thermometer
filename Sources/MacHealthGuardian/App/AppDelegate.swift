@@ -13,6 +13,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var quickLinkItems: [NSMenuItem] = []
     private let manageQuickLinksItem = NSMenuItem(title: "管理快捷入口…", action: nil, keyEquivalent: "")
     private let memoryPressureItem = NSMenuItem(title: "内存压力 --", action: nil, keyEquivalent: "")
+    private let calendarMenuView = MonthCalendarMenuView()
+    private let calendarItem = NSMenuItem()
     private let memoryItem = NSMenuItem(title: "内存 --", action: nil, keyEquivalent: "")
     private let networkItem = NSMenuItem(title: "网络流量 --", action: nil, keyEquivalent: "")
     private let cpuItem = NSMenuItem(title: "CPU --", action: nil, keyEquivalent: "")
@@ -68,6 +70,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
 
         menu.addItem(memoryPressureItem)
+        calendarItem.view = calendarMenuView
+        menu.addItem(calendarItem)
         menu.addItem(memoryItem)
         menu.addItem(networkItem)
         menu.addItem(cpuItem)
@@ -121,6 +125,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     func menuWillOpen(_ menu: NSMenu) {
         updateQuickLinkMenuItems()
+        calendarMenuView.resetToCurrentMonth()
         updateLaunchAtLoginMenuItem()
         updateDisplayMenuItems()
     }
