@@ -10,8 +10,8 @@
 
 公开版本会放在 GitHub Release：
 
-- 下载最新版：`Releases` 页面里的 `DDQs-Cyber-Thermometer-0.8.1.dmg`
-- 当前版本：`v0.8.1`
+- 下载最新版：`Releases` 页面里的 `DDQs-Cyber-Thermometer-0.8.2.dmg`
+- 当前版本：`v0.8.2`
 - 许可证：MIT
 
 安装方式：打开 DMG，把 `动动枪赛博体温计.app` 拖到 `Applications`。
@@ -25,7 +25,7 @@
 - 顶栏迷你柱：内存压力、内存占用率、CPU 占用率
 - 紧贴的数字：核心温度、实时下载速率、实时上传速率
 - 鼠标悬停：显示完整的内存、CPU、核心温度和网络流量
-- 点击菜单：显示网络流量和风扇当前转速，支持快捷打开网页、管理快捷入口、调整顶栏显示项、开机启动、检查更新、复制诊断信息、刷新或退出
+- 点击菜单：显示网络流量、风扇当前转速和极简月历，支持快捷打开网页、管理快捷入口、调整顶栏显示项、开机启动、检查更新、复制诊断信息、刷新或退出
 
 ## 介绍页面
 
@@ -58,10 +58,10 @@ Scripts/package-dmg.sh
 生成：
 
 ```text
-dist/DDQs-Cyber-Thermometer-0.8.1.dmg
-dist/DDQs-Cyber-Thermometer-0.8.1.dmg.sha256
-dist/DDQs-Cyber-Thermometer-0.8.1.app.zip
-dist/DDQs-Cyber-Thermometer-0.8.1.app.zip.sha256
+dist/DDQs-Cyber-Thermometer-0.8.2.dmg
+dist/DDQs-Cyber-Thermometer-0.8.2.dmg.sha256
+dist/DDQs-Cyber-Thermometer-0.8.2.app.zip
+dist/DDQs-Cyber-Thermometer-0.8.2.app.zip.sha256
 ```
 
 只构建 App：
@@ -106,6 +106,10 @@ v0.7.2 起，顶栏紧凑流量使用固定三位有效数字显示，超过当�
 v0.8.0 起，点击顶栏图标后菜单顶部提供 3 个快捷网页入口。默认入口为“雪鸡号池用量”，打开 `https://ddq.stats.trytrythisai.com/`。
 
 空入口点击后可填写名称和链接；已有入口可通过“管理快捷入口…”修改或清空。链接会用系统默认浏览器打开。
+
+## 菜单月历
+
+v0.8.2 起，点击顶栏图标后，“内存压力”下方会显示极简月历。月历默认周一开始、周日结束，并支持切换上个月和下个月。
 
 ## 应用图标
 
