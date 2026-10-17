@@ -4,6 +4,7 @@ import MacHealthGuardianCore
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let monitor = SystemMonitor()
+    private let processCPUMonitor = ProcessCPUMonitor()
     private let renderer = StatusImageRenderer()
     private let updateController = UpdateController()
     private let launchAtLoginController = LaunchAtLoginController()
@@ -18,6 +19,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let memoryItem = NSMenuItem(title: "内存 --", action: nil, keyEquivalent: "")
     private let networkItem = NSMenuItem(title: "网络流量 --", action: nil, keyEquivalent: "")
     private let cpuItem = NSMenuItem(title: "CPU --", action: nil, keyEquivalent: "")
+    private let cpuProcessesView = CPUProcessesMenuView()
+    private let cpuProcessesItem = NSMenuItem()
     private let temperatureItem = NSMenuItem(title: "核心温度 --", action: nil, keyEquivalent: "")
     private let fanItem = NSMenuItem(title: "风扇转速 --", action: nil, keyEquivalent: "")
     private let updatedItem = NSMenuItem(title: "等待刷新", action: nil, keyEquivalent: "")
@@ -56,6 +59,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         monitor.onSnapshot = { [weak self] snapshot in
             self?.render(snapshot)
         }
+        processCPUMonitor.onUpdate = { [weak self] state in
+            self?.cpuProcessesView.render(state)
+        }
         monitor.start()
     }
 
@@ -75,6 +81,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(memoryItem)
         menu.addItem(networkItem)
         menu.addItem(cpuItem)
+        cpuProcessesItem.view = cpuProcessesView
+        menu.addItem(cpuProcessesItem)
         menu.addItem(temperatureItem)
         menu.addItem(fanItem)
         menu.addItem(updatedItem)
@@ -128,6 +136,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         calendarMenuView.resetToCurrentMonth()
         updateLaunchAtLoginMenuItem()
         updateDisplayMenuItems()
+        processCPUMonitor.start()
+    }
+
+    func menuDidClose(_ menu: NSMenu) {
+        processCPUMonitor.stop()
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        processCPUMonitor.stop()
     }
 
     private func render(_ snapshot: SystemSnapshot) {

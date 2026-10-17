@@ -9,6 +9,7 @@ DDQ's Cyber Thermometer，中文名“动动枪赛博体温计”，是一个 ma
 - 在 macOS 顶栏展示内存占用、CPU 占用和核心温度。
 - 鼠标悬停时展示完整指标摘要。
 - 点击菜单查看内存、CPU、核心温度、风扇转速和刷新时间。
+- 展开菜单时按需采样 CPU 占用前三名进程，关闭后停止，便于排查发热来源。
 - 支持手动刷新、退出、开机启动设置。
 - 支持从 GitHub Release 检查更新，优先下载 `.app.zip` 自动替换安装，并回退支持 DMG。
 - 提供静态介绍页和发布脚本，便于通过 GitHub Release 与 GitHub Pages 分发。
@@ -87,7 +88,7 @@ App Bundle 元信息。当前 bundle 标识为 `com.dongdongqiang.cyber-thermome
 
 App target，负责菜单栏应用入口和用户界面相关逻辑：
 
-- `App/`：SwiftUI App 入口、`AppDelegate`、快捷入口设置、菜单月历和命令行模式。
+- `App/`：SwiftUI App 入口、`AppDelegate`、快捷入口设置、菜单月历、CPU 进程列表和命令行模式。
 - `Rendering/`：状态栏图像绘制。
 - `Updates/`：更新检查 UI 流程和 ZIP/DMG 安装脚本执行。
 - `LaunchAtLogin/`：通过 `SMAppService.mainApp` 管理开机启动。
@@ -97,7 +98,7 @@ App target，负责菜单栏应用入口和用户界面相关逻辑：
 Core target，负责可复用、可测试的核心逻辑：
 
 - `Models/`：`SystemSnapshot`、`MemorySnapshot`、`FanSpeedSnapshot` 等值对象。
-- `Monitoring/`：定时刷新、CPU/内存采样、`vm_stat` 解析。
+- `Monitoring/`：定时刷新、CPU/内存采样、`vm_stat` 解析；`ProcessCPUSampler` 通过 libproc 读取进程 CPU 时间，`ProcessCPUMonitor` 管理菜单展开期间的采样生命周期。
 - `Sensors/`：Apple Silicon 温度、AppleSMC 风扇、外部命令 fallback。
 - `Updates/`：Release Atom 解析、版本比较、资产选择、更新错误模型。
 - `Support/`：Shell 调用、字符串转义、时间/百分比/容量格式化。
